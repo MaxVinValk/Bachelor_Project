@@ -6,6 +6,9 @@ class ExplorationPolicy():
 	def __init__(self):
 		pass
 
+	def chooseAction(self, qValues):
+		pass
+
 	def endSimulationUpdate(self):
 		pass
 
