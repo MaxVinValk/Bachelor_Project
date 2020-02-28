@@ -43,11 +43,7 @@ class QLearningTabModule(LogicModule):
 			self.loadTable(self.tableInFile)
 
 	def getAction(self, state):
-
-		if (self.explorationPolicy.takeRandom()):
-			return np.random.randint(0, self.actionSize)
-		else:
-			return np.argmax(self.qTable[tuple(state)])
+		return self.explorationPolicy.chooseAction(self.qTable[tuple(state)])
 
 	# TODO Perhaps add named tuples?
 	def train(self, origState, resState, action, reward, done):

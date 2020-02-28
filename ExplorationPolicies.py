@@ -11,6 +11,13 @@ class ExplorationPolicy():
 
 class EpsilonGreedyPolicy(ExplorationPolicy):
 
+	#this function allows us to obtain an epsilon decay, which results in an epsilon of targetEpsilon at episode numEpisodes
+	#under a multiplication epsilon decay
+	def getDecay(targetEpsilon, numEpisodes):
+		return np.power(np.e, (np.log(targetEpsilon) / numEpisodes))
+
+
+
 	VALID_DECAY_MODES = ["multiplication", "linear"]
 
 	def __init__(self, epsilon, decayRate, minEpsilon, decayMode = "multiplication"):
@@ -45,6 +52,12 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 		if np.random.random() < self.epsilon:
 			return True
 		return False
+
+	def chooseAction(self, qValues):
+		if (self.takeRandom()):
+			return np.random.randint(0, len(qValues))
+		else:
+			return np.argmax(qValues)
 
 	def getEpsilon(self):
 		return self.epsilon
