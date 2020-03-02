@@ -1,4 +1,5 @@
 import numpy as np
+from ConsoleMessages import ConsoleMessages as cm
 
 class LogicModule():
 
@@ -17,7 +18,7 @@ class LogicModule():
 	def endSimulationUpdate(self):
 		pass
 
-#TODO: Loading of a table from file
+
 
 class QLearningTabModule(LogicModule):
 
@@ -26,7 +27,7 @@ class QLearningTabModule(LogicModule):
 		self.LEARNING_RATE = learningRate
 		self.tableInFile = tableInFile
 
-		print(f"\033[0;0mInitialized Tabular Q-Learning with discount Factor: {discountFactor} and learning Rate: {learningRate}")
+		print(f"{cm.NORMAL}Initialized Tabular Q-Learning with discount Factor: {discountFactor} and learning Rate: {learningRate}")
 
 
 		super(QLearningTabModule, self).__init__(explorationPolicy)
@@ -36,7 +37,7 @@ class QLearningTabModule(LogicModule):
 		self.actionSize = actionSize;
 
 		if (self.tableInFile == None):
-			print(f"\033[0;0mSetting up Q-table of size:{stateDims + [actionSize]}")
+			print(f"{cm.NORMAL}Setting up Q-table of size:{stateDims + [actionSize]}")
 			self.qTable = np.random.uniform(low=-2, high = 0, size = stateDims + [actionSize])
 		else:
 			print(f"Loading table: {self.tableInFile}")

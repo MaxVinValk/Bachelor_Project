@@ -1,11 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from datetime import datetime
-
-
-AVERAGE_OVER = 100_000
+from Statistics import StatCollector
+from ConsoleMessages import ConsoleMessages as cm
 
 # TODO Change order of returns/train args to conform to the standard tuple description of a sample
 
@@ -19,19 +17,11 @@ class Agent():
 		logicModule.setupModule(stateDims, actionSize)
 
 	def train(self, numSimulations):
+		statC = StatCollector.getInstance();
 
-		if (numSimulations % AVERAGE_OVER):
-			print(f"\033[1;31mWARNING: number of simulations {numSimulations} " +
-			f"is not divisible by average over {AVERAGE_OVER}." +
-			f"Data may incomplete incorrect as a result.")
-
-		rewardsOverTime = []
-		epsilonOverTime = []
-		guessesOverTime = []
-
-		rewardsAvg = []
-		epsilonAvg = []
-		guessesAvg = []
+		statC.addStatistic("rewardsOverTime", "Rewards received over time")
+		statC.addStatistic("guessesOverTime", "Number of guesses over time")
+		statC.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
 		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation"):
 			self.environment.reset()
@@ -51,37 +41,11 @@ class Agent():
 
 			self.logicModule.endSimulationUpdate()
 
-			rewardsOverTime.append(collectiveReward)
-			epsilonOverTime.append(self.logicModule.getExplorationPolicy().getEpsilon())
-			guessesOverTime.append(guesses)
+			statC.updateStatistic("rewardsOverTime", collectiveReward)
+			statC.updateStatistic("guessesOverTime", guesses)
+			statC.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
+		date = datetime.now().strftime('%m-%d_%H:%M')
 
-			if (episode % AVERAGE_OVER == 0):
-				rewardsAvg.append(np.average(rewardsOverTime[-AVERAGE_OVER:]))
-				epsilonAvg.append(np.average(epsilonOverTime[-AVERAGE_OVER:]))
-				guessesAvg.append(np.average(guessesOverTime[-AVERAGE_OVER:]))
-
-
-		plt.subplot(2, 2, 1)
-		plt.plot(rewardsAvg)
-
-		plt.title(f"Rewards received over time, averaged over {AVERAGE_OVER} runs")
-
-		plt.subplot(2, 2, 2)
-		plt.plot(epsilonAvg)
-
-		plt.title(f"Epsilon over time, averaged over {AVERAGE_OVER} runs")
-
-		plt.subplot(2, 2, 3)
-		plt.plot(guessesAvg)
-
-		plt.title(f"Guesses before success over time, averaged over {AVERAGE_OVER} runs")
-
-		plt.subplot(2, 2, 4)
-		plt.plot(1 / np.array(guessesAvg))
-
-		plt.title(f"Classification precision, averaged over {AVERAGE_OVER} runs")
-
-		plt.show()
-
-		self.logicModule.saveTable(f"qTables/qTable_{datetime.now().strftime('%m-%d_%H:%M')}")
+		statC.saveData(f"data/results_{date}")
+		self.logicModule.saveTable(f"qTables/qTable_{date}")

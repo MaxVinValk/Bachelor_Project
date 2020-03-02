@@ -3,13 +3,14 @@ from Environment import Environment
 from Agent import Agent
 from ExplorationPolicies import EpsilonGreedyPolicy
 from LogicModules import QLearningTabModule
+from Statistics import StatCollector
 
 import numpy as np
 
 # To allow for easier reproducability
 np.random.seed(1)
 
-NUM_SIMULATIONS = 100_000_000
+NUM_SIMULATIONS = 100
 
 env = Environment()
 
@@ -25,3 +26,7 @@ lm = QLearningTabModule(explorationPolicy = explPolicy, discountFactor = 0.9, le
 
 agent = Agent(env, lm)
 agent.train(NUM_SIMULATIONS)
+
+statC = StatCollector.getInstance()
+statC.summarize()
+statC.plotStatistics(averageOver = 10)
