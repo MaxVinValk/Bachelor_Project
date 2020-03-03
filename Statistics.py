@@ -37,7 +37,7 @@ class ClassCollector():
         try:
             os.mkdir(dirName)
         except OSError:
-            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...")
+            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
 
         for key, value in self.statistics.items():
 
@@ -46,7 +46,7 @@ class ClassCollector():
             try:
                 os.mkdir(localDir)
             except OSError:
-                print(f"{cm.WARNING} Failed to create directory for data. Data is lost...")
+                print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
 
             data = value["data"]
             chunks = int(len(data) / MAX_NUM_TO_FILE)
@@ -101,11 +101,11 @@ class ClassCollector():
 
         if (len(data) < localAverageOver):
             print(f"{cm.WARNING} averageOver is larger than the data averaged over," +
-            f"defaulting it to 1. Plot titles will be incorrect as a result.")
+            f"defaulting it to 1. Plot titles will be incorrect as a result.{cm.NORMAL}")
             localAverageOver = 1
         elif (len(data) % localAverageOver):
             print(f"{cm.WARNING} averageOver {localAverageOver} does not divide data of length " +
-            f"{len(data)} wholly, plots may be incorrect as a result.]")
+            f"{len(data)} wholly, plots may be incorrect as a result.{cm.NORMAL}")
 
         chunks = int(len(data) / localAverageOver)
 
@@ -115,31 +115,40 @@ class ClassCollector():
         return avg
 
 
-
-
-    def readyPlot(self, averageOver, plots):
+    def readyPlot(self, averageOver, plots, shape = [2, 2], plotAll = True, *toPlot):
 
         avgData = {}
+        maxSubPlots = shape[0] * shape[1]
 
-        for key, value in self.statistics.items():
-            avgData[value["title"]] = self._averageStatOver(key, averageOver)
+        if (plotAll):
+            for key, value in self.statistics.items():
+                avgData[value["title"]] = self._averageStatOver(key, averageOver)
+        else:
+            for stat in toPlot:
+                if stat in self.statistics:
+                    value = self.statistics[stat]
+                    avgData[value["title"]] = self._averageStatOver(stat, averageOver)
+                else:
+                    print(f"{cm.INFO}Could not find data for statistic {stat} in class" +
+                    f"{self.owner}{cm.NORMAL}")
 
-        plt.figure(plots)
+
         plotCtr = 1
 
         for title, data in avgData.items():
 
-            plt.subplot(2, 2, plotCtr)
+            if (plotCtr == 1):
+                plt.figure(plots)
+
+            plt.subplot(shape[0], shape[1], plotCtr)
             plt.plot(data)
 
             plt.title(title + f", averaged over {averageOver} runs")
             plotCtr += 1
 
-            #We allow at most 4 plots per subplot
-            if (plotCtr > 4):
+            if (plotCtr > maxSubPlots):
                 plotCtr = 1
                 plots += 1
-                plt.figure(plots)
 
 
 
@@ -191,7 +200,7 @@ class StatCollector():
         try:
             os.mkdir(dirName)
         except OSError:
-            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...")
+            print(f"{cm.WARNING} Failed to create directory for data. Data is lost..{cm.NORMAL}.")
 
         for key, value in self.collectors.items():
             value.save(dirName)
@@ -206,25 +215,42 @@ class StatCollector():
 
     def summarize(self):
 
-        print(  "\n\n"                              +
+        print(  f"{cm.NORMAL}\n\n"                  +
                 "----------------------------\n"    +
                 " Overview of data collected \n"    +
                 "----------------------------\n"
         )
 
         for key, value in self.collectors.items():
-            print(f"Data found for: {key}")
+            print(f"{cm.BACKED_P}###Data found for: {key}{cm.NORMAL}\n")
 
             for k2, v2 in value.getStatistics().items():
-                print(f"statistic: {v2['title']}")
-                print(f"values recorded: {len(v2['data'])}")
+                print(f"{cm.NORMAL}statistic: {v2['title']}{cm.NORMAL}")
+                print(f"{cm.NORMAL}name: {k2}{cm.NORMAL}")
+                print(f"{cm.NORMAL}values recorded: {len(v2['data'])}{cm.NORMAL}")
                 print("-----\n")
             print("######\n")
 
-    def plot(self, averageOver = 1):
+    def plot(self, averageOver = 1, shape = [2, 2]):
         plots = 0
 
         for key, value in self.collectors.items():
-            plots = value.readyPlot(averageOver, plots)
+            plots = value.readyPlot(averageOver, plots, shape)
 
         plt.show()
+
+    def plotClass(self, className, averageOver = 1, shape = [2, 2]):
+
+        if className in self.collectors:
+            plots = self.collectors[className].readyPlot(averageOver, 0, shape)
+            plt.show()
+        else:
+            print(f"{cm.INFO}Could not find data for class {className}{cm.NORMAL}")
+
+    def plotStatistic(self, className, statName, averageOver = 1):
+
+        if className in self.collectors:
+            self.collectors[className].readyPlot(averageOver, 0, [1, 1], False, statName)
+            plt.show()
+        else:
+            print(f"{cm.INFO}Could not find data for class {className}{cm.NORMAL}")
