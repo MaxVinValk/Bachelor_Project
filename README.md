@@ -18,12 +18,12 @@ The output directory can be specified in Agent by setting SAVE_IN.
 
 The StatCollector class can be used to load in and plot data. Usage is as follows,
 from a python3 console:
-´´´
+```python
 from Statistics.py import StatCollector
 sc = StatCollector.getInstance()
 sc.load(FOLDER_NAME)
 sc.plot(averageOver = 1, shape = [2, 2])
-´´´
+```
 
 You can get information about the data held by using the summarize() function of
 StatCollector. FOLDER_NAME is the folder holding all the data for a run.
@@ -36,11 +36,11 @@ At most shape[0] * shape[1] subplots will be plotted on a single graph.
 
 Further, there are some additional functions:
 
-´´´
+```python
 sc.summarize()
 sc.plotClass(className, averageOver = 1, shape = [2, 2])
 sc.plotStatistic(className, statName, averageOver = 1):
-´´´
+```
 
 The summarize function gives an overview of what data has been loaded in.
 The plotClass method allows one to plot all data from one class.
@@ -91,13 +91,13 @@ name for the statistic as well as a title/description of the statistic. We then
 add data to it with updateStatistic.
 
 In short:
-´´´
+```python
 statC = StatCollector.getInstance()
 cc = statC.getClassCollector()
 
 cc.addStatistic("statistic name", "statistic title")
 cc.updateStatistic("statistic name", "value")
-´´´
+```
 
 After the program is done, use the save function of StatCollector and provide
 a folder to hold the data.
