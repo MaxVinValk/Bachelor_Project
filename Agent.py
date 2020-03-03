@@ -1,27 +1,33 @@
+import os
 import numpy as np
-
 from tqdm import tqdm
 from datetime import datetime
-from Statistics import StatCollector
+from Statistics import StatCollector, ClassCollector
 from ConsoleMessages import ConsoleMessages as cm
 
-# TODO Change order of returns/train args to conform to the standard tuple description of a sample
+SAVE_IN = "/media/max/88B5-59E2/data"
+MODEL_LOCATION = SAVE_IN + "/" + "qTable"
+DATA_LOCATION = SAVE_IN + "/" + "rawData"
 
 class Agent():
 	def __init__(self, environment, logicModule):
 		self.environment = environment
 		self.logicModule = logicModule
 
+
+
 		stateDims, actionSize = environment.getEnvParams()
 
 		logicModule.setupModule(stateDims, actionSize)
 
 	def train(self, numSimulations):
-		statC = StatCollector.getInstance();
 
-		statC.addStatistic("rewardsOverTime", "Rewards received over time")
-		statC.addStatistic("guessesOverTime", "Number of guesses over time")
-		statC.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
+		statC = StatCollector.getInstance()
+		cc = statC.getClassCollector()
+
+		cc.addStatistic("rewardsOverTime", "Rewards received over time")
+		cc.addStatistic("guessesOverTime", "Number of guesses over time")
+		cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
 		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation"):
 			self.environment.reset()
@@ -41,11 +47,25 @@ class Agent():
 
 			self.logicModule.endSimulationUpdate()
 
-			statC.updateStatistic("rewardsOverTime", collectiveReward)
-			statC.updateStatistic("guessesOverTime", guesses)
-			statC.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+			cc.updateStatistic("rewardsOverTime", collectiveReward)
+			cc.updateStatistic("guessesOverTime", guesses)
+			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
-		date = datetime.now().strftime('%m-%d_%H:%M')
+		date = datetime.now().strftime('%m-%d_%H-%M')
 
-		statC.saveData(f"data/results_{date}")
-		self.logicModule.saveTable(f"qTables/qTable_{date}")
+		if (not os.path.exists(MODEL_LOCATION)):
+			try:
+				os.mkdir(MODEL_LOCATION)
+			except OSError:
+				print(f"{cm.WARNING} Failed to create directory for data. Data may be lost...")
+
+		if (not os.path.exists(DATA_LOCATION)):
+			try:
+				os.mkdir(DATA_LOCATION)
+			except OSError:
+				print(f"{cm.WARNING} Failed to create directory for model. Model may be lost...")
+
+
+
+		statC.save(DATA_LOCATION + f"/results_{date}")
+		self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")

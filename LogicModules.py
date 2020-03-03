@@ -18,6 +18,12 @@ class LogicModule():
 	def endSimulationUpdate(self):
 		pass
 
+	def save(self, fileName):
+		pass
+
+	def load(self, fileName):
+		pass
+
 
 
 class QLearningTabModule(LogicModule):
@@ -46,7 +52,7 @@ class QLearningTabModule(LogicModule):
 	def getAction(self, state):
 		return self.explorationPolicy.chooseAction(self.qTable[tuple(state)])
 
-	# TODO Perhaps add named tuples?
+
 	def train(self, origState, resState, action, reward, done):
 
 		# Get max future
@@ -65,8 +71,8 @@ class QLearningTabModule(LogicModule):
 	def getExplorationPolicy(self):
 		return self.explorationPolicy
 
-	def loadTable(self, fileName):
+	def load(self, fileName):
 		self.qTable = np.load(fileName)
 
-	def saveTable(self, fileName):
+	def save(self, fileName):
 		np.save(fileName, self.qTable)

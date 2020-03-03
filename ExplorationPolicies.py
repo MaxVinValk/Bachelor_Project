@@ -1,12 +1,12 @@
 import numpy as np
 
 from ConsoleMessages import ConsoleMessages as cm
-from Statistics import StatCollector
+from Statistics import StatCollector, ClassCollector
 # Exploration modules
 
 class ExplorationPolicy():
 
-	statC = None
+	cc = None
 
 	def __init__(self):
 		pass
@@ -14,8 +14,6 @@ class ExplorationPolicy():
 	def chooseAction(self, qValues):
 		pass
 
-	def setStatC(self, statC):
-		self.statC = statC;
 
 	def endSimulationUpdate(self):
 		pass
@@ -49,7 +47,8 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 		print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
 
 		statC = StatCollector.getInstance()
-		statC.addStatistic("epsilonOverTime", "Epsilon value over time")
+		self.cc = statC.getClassCollector()
+		self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
 
 	def updateEpsilon(self):
 
@@ -63,19 +62,19 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			self.epsilon = max(self.epsilon - self.decayRate, self.minEpsilon)
 
 	def endSimulationUpdate(self):
-		statC = StatCollector.getInstance()
-		statC.updateStatistic("epsilonOverTime", self.epsilon)
+		#statC = StatCollector.getInstance()
+		self.cc.updateStatistic("epsilonOverTime", self.epsilon)
 
 		self.updateEpsilon()
 
-	def takeRandom(self):
+	def _takeRandom(self):
 
 		if np.random.random() < self.epsilon:
 			return True
 		return False
 
 	def chooseAction(self, qValues):
-		if (self.takeRandom()):
+		if (self._takeRandom()):
 			return np.random.randint(0, len(qValues))
 		else:
 			return np.argmax(qValues)

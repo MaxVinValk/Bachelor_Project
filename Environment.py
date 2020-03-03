@@ -32,7 +32,7 @@ class Environment():
 	def __init__(self):
 		pass
 
-	def createRandomState(self):
+	def _createRandomState(self):
 		self.fields.clear()
 
 		for i in range(self.NO_FIELDS):
@@ -53,7 +53,7 @@ class Environment():
 		return [len(self.COLORS), len(self.TYPES)]*self.NO_FIELDS, len(self.ACTIONS)
 
 
-	
+
 	def performAction(self, action):
 
 		currentState = self.fields
@@ -80,4 +80,4 @@ class Environment():
 		return currentState, nextState, reward, done
 
 	def reset(self):
-		self.createRandomState()
+		self._createRandomState()
