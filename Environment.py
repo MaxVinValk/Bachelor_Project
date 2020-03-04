@@ -5,8 +5,8 @@ import numpy as np
 class Environment():
 
 	# environment parameters
-	COLORS = ["red", "blue", "yellow", "green"]
-	TYPES = ["ball", "box", "person"]
+	COLORS = ["red", "blue", "yellow", "green", "none"]
+	TYPES = ["ball", "box", "person", "none"]
 	ACTIONS = [ ["continue", 2], ["push", 5], ["ask", 4], ["alt", 10] ]
 
 	#Here we store for each combination of colors + types the action that resolves the situation
@@ -37,9 +37,13 @@ class Environment():
 
 		for i in range(self.NO_FIELDS):
 
-			obstacleCol = np.random.randint(0, len(self.COLORS))
-			obstacleType = np.random.randint(0, len(self.TYPES))
-
+			# Accounting for the none-none type. Should be generated in the right proportion
+			if (np.random.randint(0, (len(self.COLORS) -1) * (len(self.TYPES) -1) + 1) == 0):
+				obstacleCol = len(self.COLORS) - 1
+				obstacleType = len(self.TYPES) - 1
+			else:
+				obstacleCol = np.random.randint(0, len(self.COLORS) - 1)
+				obstacleType = np.random.randint(0, len(self.TYPES) - 1)
 
 			self.fields.append(obstacleCol)
 			self.fields.append(obstacleType)
@@ -47,6 +51,7 @@ class Environment():
 	def getState(self):
 		return self.fields
 
+	# +1 for the NONE NONE state
 	def getEnvParams(self):
 		return [len(self.COLORS), len(self.TYPES)]*self.NO_FIELDS, len(self.ACTIONS)
 
