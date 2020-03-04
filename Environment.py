@@ -37,10 +37,12 @@ class Environment():
 
 		for i in range(self.NO_FIELDS):
 
-			#TODO: None, None
-
-			obstacleCol = np.random.randint(0, len(self.COLORS))
-			obstacleType = np.random.randint(0, len(self.TYPES))
+			if (np.randint(0, len(self.COLORS) + len(self.TYPES) + 1) == 0):
+				obstacleCol = "none"
+				obstacleType = "none"
+			else:
+				obstacleCol = np.random.randint(0, len(self.COLORS))
+				obstacleType = np.random.randint(0, len(self.TYPES))
 
 
 			self.fields.append(obstacleCol)
