@@ -3,74 +3,101 @@ import inspect
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from datetime import datetime
+import errno
 
 from ConsoleMessages import ConsoleMessages as cm
 
-MAX_NUM_TO_FILE = 1_000_000
+MAX_NUM_TO_FILE = 10_000
+SAVE_WHILE_RUNNING = False
+
+DATE = datetime.now().strftime('%m-%d_%H-%M')
+SAVE_IN = "/media/max/88B5-59E2/data/" + DATE
+
+#TODO: Save data on the fly
 
 class ClassCollector():
 
-    def __init__(self, owner):
+    def __init__(self, owner, load = False):
         self.owner = owner
+
+        self.folderPath = SAVE_IN + "/rawData/" + self.owner
+
+        if (not load):
+            try:
+                os.mkdir(self.folderPath)
+            except OSError:
+                print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+
         self.statistics = {}
 
     def addStatistic(self, name, title):
         if name not in self.statistics:
-            self.statistics[name] = {"title" : title, "data" : []}
+            self.statistics[name] = {"title" : title, "data" : [], "files" : 0}
+
+        statPath = self.folderPath + "/" + name
+
+        try:
+            os.mkdir(statPath)
+        except OSError:
+            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+
+        with open(statPath + "/infoFile", "wb") as f:
+            pickle.dump(title, f)
 
     def updateStatistic(self, name, value):
         if name in self.statistics:
             self.statistics[name]["data"].append(value)
+            self.saveStatistic(name)
         else:
             print(f"{cm.WARNING} attempted update of unknown statistic" +
-            f"{name} by {calledBy}")
+            f"{name} by {calledBy}{cm.NORMAL}")
+
+
+    def saveStatistic(self, name):
+        info = self.statistics[name]
+
+        if (len(info["data"]) >= MAX_NUM_TO_FILE):
+
+            fileName = self.folderPath + "/" + name + "/d" + str(info["files"])
+
+            #write to file
+            with open(fileName, "wb") as f:
+                pickle.dump(info["data"], f)
+            info["data"] = []
+            info["files"] += 1
+
 
     def getStatistics(self):
         return self.statistics
 
-    def save(self, dirName):
-
-        dirName = dirName + "/" + self.owner
-
-        #TODO: Error handling needs to be more robust here
-
-        try:
-            os.mkdir(dirName)
-        except OSError:
-            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+    def save(self):
 
         for key, value in self.statistics.items():
 
-            localDir = dirName + "/" + key
+            if (SAVE_WHILE_RUNNING):
+                self.saveStatistic(key)
+            else:
+                localDir = self.folderPath + "/" + key
 
-            try:
-                os.mkdir(localDir)
-            except OSError:
-                print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+                data = value["data"]
+                chunks = int(len(data) / MAX_NUM_TO_FILE)
+                fileCtr = 0
+                filePrefix = localDir + "/d_"
 
-            data = value["data"]
-            chunks = int(len(data) / MAX_NUM_TO_FILE)
-            fileCtr = 0
-            filePrefix = localDir + "/d_"
+                for i in range(0, chunks):
+                    fileName = filePrefix + str(fileCtr)
 
-            for i in range(0, chunks):
-                fileName = filePrefix + str(fileCtr)
+                    with open(fileName, "wb") as f:
+                        pickle.dump(data[i*MAX_NUM_TO_FILE : (i+1)*MAX_NUM_TO_FILE], f)
+                    fileCtr += 1
 
-                with open(fileName, "wb") as f:
-                    pickle.dump(data[i*MAX_NUM_TO_FILE : (i+1)*MAX_NUM_TO_FILE], f)
-                fileCtr += 1
+                rem = len(data) % MAX_NUM_TO_FILE
 
-            rem = len(data) % MAX_NUM_TO_FILE
-
-            if (rem):
-                fileName = filePrefix + str(fileCtr)
-                with open(fileName, "wb") as f:
-                    pickle.dump(data[-rem:], f)
-
-
-            #Create information file which tells us the title/could hold other info
-            with open(localDir + "/" + "infoFile", "wb") as f:
-                pickle.dump(value["title"], f)
+                if (rem):
+                    fileName = filePrefix + str(fileCtr)
+                    with open(fileName, "wb") as f:
+                        pickle.dump(data[-rem:], f)
 
 
     def _unpack(self, dirPath, dirName):
@@ -80,7 +107,6 @@ class ClassCollector():
 
         with open(dirPath + "/" + "infoFile", "rb") as f:
             self.statistics[dirName]["title"] = pickle.load(f)
-
         for file in os.listdir(dirPath):
             if "infoFile" not in file:
 
@@ -170,18 +196,31 @@ class StatCollector():
     __instance = None
 
     @staticmethod
-    def getInstance():
+    def getInstance(load = False):
         if StatCollector.__instance == None:
-            StatCollector()
+            StatCollector(load)
         return StatCollector.__instance
 
-    def __init__(self):
+    def __init__(self, load):
         if StatCollector.__instance != None:
             raise Exception("This class is a singleton - access with getInstance() instead")
         else:
             StatCollector.__instance = self
             self.collectors = {}
             self.statistics = {}
+
+            if (not load):
+                try:
+                    os.mkdir(SAVE_IN)
+                except OSError:
+                    print(f"{cm.WARNING} Failed to create root directory for data. Data is lost..{cm.NORMAL}")
+
+                try:
+                    os.mkdir(SAVE_IN + "/rawData")
+                except OSError:
+                    print(f"{cm.WARNING} Failed to create rawData directory for data. Data is lost..{cm.NORMAL}")
+
+
 
 
     def getClassCollector(self):
@@ -194,14 +233,7 @@ class StatCollector():
 
 
 
-    def save(self, dirName):
-
-        #TODO: Error handling needs to be more robust here
-        try:
-            os.mkdir(dirName)
-        except OSError:
-            print(f"{cm.WARNING} Failed to create directory for data. Data is lost..{cm.NORMAL}.")
-
+    def save(self):
         for key, value in self.collectors.items():
             value.save(dirName)
 
@@ -209,7 +241,7 @@ class StatCollector():
     def load(self, dirName):
 
         for folder in os.listdir(dirName):
-            self.collectors[folder] = ClassCollector(folder)
+            self.collectors[folder] = ClassCollector(folder, True)
             self.collectors[folder].load(dirName + "/" + folder)
 
 

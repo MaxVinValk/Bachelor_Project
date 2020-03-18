@@ -18,13 +18,13 @@ class Environment():
 	}
 
 
-	NO_FIELDS = 6
+	NO_FIELDS = 1
 
 	#In the simulation only one field is relevant for choosing the correct behaviour
-	RELEVANT_FIELD = 4
+	RELEVANT_FIELD = 0
 
-	SUCCESS_REWARD = 15
-	FAILURE_PUNISHMENT = 5
+	SUCCESS_REWARD = 30
+	FAILURE_PUNISHMENT = 10
 
 	#The observed objects present
 	fields = []

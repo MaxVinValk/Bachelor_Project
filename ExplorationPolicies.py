@@ -11,7 +11,7 @@ class ExplorationPolicy():
 	def __init__(self):
 		pass
 
-	def chooseAction(self, qValues):
+	def getAction(self, qValues):
 		pass
 
 
@@ -73,7 +73,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			return True
 		return False
 
-	def chooseAction(self, qValues):
+	def getAction(self, qValues):
 		if (self._takeRandom()):
 			return np.random.randint(0, len(qValues))
 		else:

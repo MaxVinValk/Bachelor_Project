@@ -67,5 +67,5 @@ class Agent():
 
 
 
-		statC.save(DATA_LOCATION + f"/results_{date}")
-		self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")
+		statC.save()
+		#self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")
