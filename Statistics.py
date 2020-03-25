@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from datetime import datetime
 import errno
+from copy import deepcopy
 
 from ConsoleMessages import ConsoleMessages as cm
 
@@ -104,7 +105,90 @@ class ClassCollector():
             print(f"values recorded: {len(value['data'])}")
             print("---\n")
 
+    def sumWithOtherCC(self, cc):
 
+        for key, value in self.statistics.items():
+            if key in cc.statistics:
+                dataOwn = value["data"]
+                dataOther = cc.statistics[key]["data"]
+
+                if (len(dataOwn) != len(dataOther)):
+                    print(f"{cm.INFO}attempted sum of two class collectors who do not hold same" +
+                    f"amount of values {cm.NORMAL}")
+                else:
+                    for i in range(0, len(dataOwn)):
+                        dataOwn[i] += dataOther[i]
+
+    def divideAllData(self, div):
+        for key, value in self.statistics.items():
+            for i in range(0, len(value["data"])):
+                value["data"][i] /= div
+
+
+
+    def _averageStatOver(self, name, averageOver):
+
+        localAverageOver = averageOver
+        avg = []
+        data = self.statistics[name]["data"]
+
+        if (len(data) < localAverageOver):
+            print(f"{cm.WARNING} averageOver is larger than the data averaged over," +
+            f"defaulting it to 1. Plot titles will be incorrect as a result.{cm.NORMAL}")
+            localAverageOver = 1
+        elif (len(data) % localAverageOver):
+            print(f"{cm.WARNING} averageOver {localAverageOver} does not divide data of length " +
+            f"{len(data)} wholly, plots may be incorrect as a result.{cm.NORMAL}")
+
+        chunks = int(len(data) / localAverageOver)
+
+        for i in range(0, chunks):
+            avg.append(np.average(data[i*localAverageOver:(i+1)*localAverageOver]))
+
+        return avg
+
+
+    def readyPlot(self, averageOver, plots, shape = [2, 2], plotAll = True, *toPlot):
+
+        avgData = {}
+        maxSubPlots = shape[0] * shape[1]
+
+        if (plotAll):
+            for key, value in self.statistics.items():
+                avgData[value["title"]] = self._averageStatOver(key, averageOver)
+        else:
+            for stat in toPlot:
+                if stat in self.statistics:
+                    value = self.statistics[stat]
+                    avgData[value["title"]] = self._averageStatOver(stat, averageOver)
+                else:
+                    print(f"{cm.INFO}Could not find data for statistic {stat} in class" +
+                    f"{self.owner}{cm.NORMAL}")
+
+
+        plotCtr = 1
+
+        for title, data in avgData.items():
+
+            if (plotCtr == 1):
+                plt.figure(plots)
+
+            plt.subplot(shape[0], shape[1], plotCtr)
+            plt.plot(data)
+
+            plt.title(title + f", averaged over {averageOver} runs")
+            plotCtr += 1
+
+            if (plotCtr > maxSubPlots):
+                plotCtr = 1
+                plots += 1
+
+
+
+        if (plotCtr == 1):
+            return plots
+        else:
+            return plots + 1
 
 class RunCollector():
 
@@ -149,11 +233,26 @@ class RunCollector():
             print(f"{cm.BACKED_P}###Data found for: {key}{cm.NORMAL}\n")
             value.summarize()
 
+    def combineRunData(self, run):
+        for key, value in self.collectors.items():
+            if key in run.collectors:
+                value.sumWithOtherCC(run.collectors[key])
 
 
+    def divideAllData(self, div):
+        for key, value in self.collectors.items():
+            value.divideAllData(div)
 
+    def getData(self):
+        return self.collectors
 
+    def plot(self, averageOver = 1, shape = [2, 2], plotAll = True, *toPlot):
+        plots = 0
 
+        for key, value in self.collectors.items():
+            plots = value.readyPlot(averageOver, plots, shape, plotAll, *toPlot)
+
+        plt.show()
 #   This class is concerned with storing data from all over the program
 #   It is a singleton class, so that all data gets collected at one point
 #
@@ -270,6 +369,36 @@ class StatCollector():
 
         for run in self.runs:
             run.summarize()
+
+
+
+    #Combines in 1 run the statistics of all runs
+    #by averaging values at the storage index
+    def _averagedRun(self):
+
+        storageObj = None
+
+        for run in self.runs:
+            if storageObj == None:
+                storageObj = deepcopy(run)
+            else:
+                storageObj.combineRunData(run)
+
+        storageObj.divideAllData(len(self.runs))
+
+        return storageObj
+
+    #Allows for plotting a run with the index of the run
+    def plotRun(self, run, averageOver = 1, shape = [2, 2], plotAll = True, *toPlot):
+        self._plotRun(self.runs[run], averageOver, shape, plotAll, *toPlot)
+
+    def plotAverage(self, averageOver = 1, shape = [2, 2], plotAll = True, *toPlot):
+        averagedRun = self._averagedRun()
+        self._plotRun(averagedRun, averageOver, shape, plotAll, *toPlot)
+
+    #plots a run with a runcollector as input
+    def _plotRun(self, run, averageOver, shape, plotAll, *toPlot):
+        run.plot(averageOver, shape, plotAll, *toPlot)
 
     #TODO
     #
