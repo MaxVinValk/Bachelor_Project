@@ -23,6 +23,7 @@ class Agent():
 	def train(self, numSimulations):
 
 		statC = StatCollector.getInstance()
+
 		cc = statC.getClassCollector()
 
 		cc.addStatistic("rewardsOverTime", "Rewards received over time")
@@ -51,8 +52,9 @@ class Agent():
 			cc.updateStatistic("guessesOverTime", guesses)
 			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
-		date = datetime.now().strftime('%m-%d_%H-%M')
+		#date = datetime.now().strftime('%m-%d_%H-%M')
 
+		'''
 		if (not os.path.exists(MODEL_LOCATION)):
 			try:
 				os.mkdir(MODEL_LOCATION)
@@ -64,8 +66,7 @@ class Agent():
 				os.mkdir(DATA_LOCATION)
 			except OSError:
 				print(f"{cm.WARNING} Failed to create directory for model. Model may be lost...")
-
-
+		'''
 
 		statC.save()
 		#self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")

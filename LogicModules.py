@@ -96,9 +96,9 @@ class QLearningTabModule(LogicModule):
 class QLearningNeuralModule(LogicModule):
 
 	REPLAY_MEMORY_SIZE = 50_000
-	MIN_REPLAY_MEMORY_SIZE = 1000
-	MINIBATCH_SIZE = 256
-	UPDATE_TARGET_EVERY = 1000
+	MIN_REPLAY_MEMORY_SIZE = 32
+	MINIBATCH_SIZE = 16
+	UPDATE_TARGET_EVERY = 1 #irrelevant
 
 	ONE_HOT_ENCODING = True
 
@@ -118,8 +118,8 @@ class QLearningNeuralModule(LogicModule):
 		self.stateDims = np.array(stateDims)
 
 		self.model = self._createModel(stateDims, actionSize)
-		self.targetModel = self._createModel(stateDims, actionSize)
-		self.targetModel.set_weights(self.model.get_weights())
+		#self.targetModel = self._createModel(stateDims, actionSize)
+		#self.targetModel.set_weights(self.model.get_weights())
 
 		self.replayMemory = deque(maxlen=self.REPLAY_MEMORY_SIZE)
 		self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/{int(time.time())}")
@@ -138,10 +138,10 @@ class QLearningNeuralModule(LogicModule):
 		print(f"{cm.INFO}and output size {actionSize} {cm.NORMAL}")
 
 		model = Sequential()
-		model.add(Dense(64, input_dim = inSize))
+		model.add(Dense(32, input_dim = inSize))
 		model.add(Activation("elu"))
 
-		model.add(Dense(16))
+		model.add(Dense(8))
 		model.add(Activation("elu"))
 
 		model.add(Dense(actionSize))
@@ -173,41 +173,52 @@ class QLearningNeuralModule(LogicModule):
 	def getAction(self, state):
 		normalizedState = np.array([self._normalizeState(state)])
 
-		values = self.targetModel.predict(normalizedState)[0]
+		values = self.model.predict(normalizedState)[0]
 		return self.explorationPolicy.getAction(values)
 
 	def train(self, origState, resState, action, reward, done):
 
+		currentExperience = (self._normalizeState(origState), self._normalizeState(resState), action, reward, done)
+
 		#Add memory to replayMemory
-		self.replayMemory.append((self._normalizeState(origState), self._normalizeState(resState), action, reward, done))
+		self.replayMemory.append(currentExperience)
 
 		#Check if we have enough memories
 		if len(self.replayMemory) < self.MIN_REPLAY_MEMORY_SIZE:
 			return
 
-		miniBatch = random.sample(self.replayMemory, self.MINIBATCH_SIZE)
+		#this may cause the current batch to contain the current experience twice.
+		miniBatch = random.sample(self.replayMemory, self.MINIBATCH_SIZE-1)
+		miniBatch.append(currentExperience)
 
 		currentStates = np.array([transition[0] for transition in miniBatch])
 		currentQScores = self.model.predict(currentStates)
 
 		#Can be left out as we do not care for a sequence of actions and we have deterministic rewards
 
-		resStates = np.array([transition[1] for transition in miniBatch])
-		futureQScores = self.targetModel.predict(resStates)
+		#TEMP: NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
+		#resStates = np.array([transition[1] for transition in miniBatch])
+		#futureQScores = self.targetModel.predict(resStates)
 
 		X = []
 		y = []
 
 		for index, (batchOrigState, batchResState, batchAction, batchReward, batchDone) in enumerate(miniBatch):
 
+			#TEMP: NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
+
+			'''
 			if not batchDone:
 				maxFutureQ = np.max(futureQScores[index])
-				newQ = reward + self.DISCOUNT_FACTOR * maxFutureQ
+				newQ = batchReward + self.DISCOUNT_FACTOR * maxFutureQ
 			else:
-				newQ = reward
+				newQ = batchReward
+			'''
+
+			newQ = batchReward
 
 			currentQ = currentQScores[index]
-			currentQ[action] = newQ
+			currentQ[batchAction] = newQ
 
 			X.append(currentStates[index])
 			y.append(currentQ)
@@ -216,13 +227,14 @@ class QLearningNeuralModule(LogicModule):
 		self.model.fit(np.array(X), np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if done else None)
 
 		# updating to determine if we want to update target_model yet
+		'''
 		if done:
 			self.targetUpdateCounter += 1
 
 			if self.targetUpdateCounter > self.UPDATE_TARGET_EVERY:
 				self.targetModel.set_weights(self.model.get_weights())
 				self.targetUpdateCounter = 0
-
+		'''
 
 
 	def endSimulationUpdate(self):

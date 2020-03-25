@@ -8,99 +8,78 @@ import errno
 
 from ConsoleMessages import ConsoleMessages as cm
 
+
 MAX_NUM_TO_FILE = 10_000
-SAVE_WHILE_RUNNING = False
 
 DATE = datetime.now().strftime('%m-%d_%H-%M')
-SAVE_IN = "/media/max/88B5-59E2/data/" + DATE
+DATA_ROOT = "/media/max/88B5-59E2/data"
+SAVE_IN = DATA_ROOT + "/" + DATE
 
-#TODO: Save data on the fly
 
 class ClassCollector():
 
-    def __init__(self, owner, load = False):
+    def __init__(self, run, owner, savePath, loading = False):
         self.owner = owner
+        self.loading = loading
 
-        self.folderPath = SAVE_IN + "/rawData/" + self.owner
+        self.folderPath = f"{savePath}/{self.owner}"
 
-        if (not load):
+        if not self.loading:
             try:
                 os.mkdir(self.folderPath)
             except OSError:
-                print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+                print(f"{cm.WARNING} Failed to create directory for data of class {self.owner}. Data is lost..{cm.NORMAL}")
 
         self.statistics = {}
 
     def addStatistic(self, name, title):
+
         if name not in self.statistics:
             self.statistics[name] = {"title" : title, "data" : [], "files" : 0}
 
         statPath = self.folderPath + "/" + name
 
-        try:
-            os.mkdir(statPath)
-        except OSError:
-            print(f"{cm.WARNING} Failed to create directory for data. Data is lost...{cm.NORMAL}")
+        if not self.loading:
+            try:
+                os.mkdir(statPath)
+            except OSError:
+                print(f"{cm.WARNING} Failed to create directory for statistic {name} in class {self.owner}. Data is lost...{cm.NORMAL}")
 
         with open(statPath + "/infoFile", "wb") as f:
             pickle.dump(title, f)
 
     def updateStatistic(self, name, value):
+
         if name in self.statistics:
             self.statistics[name]["data"].append(value)
-            self.saveStatistic(name)
+
+            if (len(self.statistics[name]["data"]) >= MAX_NUM_TO_FILE):
+                self.saveStatistic(name)
         else:
             print(f"{cm.WARNING} attempted update of unknown statistic" +
-            f"{name} by {calledBy}{cm.NORMAL}")
-
+            f"{name} by {self.owner}{cm.NORMAL}")
 
     def saveStatistic(self, name):
         info = self.statistics[name]
 
-        if (len(info["data"]) >= MAX_NUM_TO_FILE):
+        if (len(info["data"]) == 0):
+            return
 
-            fileName = self.folderPath + "/" + name + "/d" + str(info["files"])
+        fileName = self.folderPath + "/" + name + "/d" + str(info["files"])
 
-            #write to file
-            with open(fileName, "wb") as f:
-                pickle.dump(info["data"], f)
-            info["data"] = []
-            info["files"] += 1
+        with open(fileName, "wb") as f:
+            pickle.dump(info["data"], f)
 
-
-    def getStatistics(self):
-        return self.statistics
+        info["data"] = []
+        info["files"] += 1
 
     def save(self):
-
         for key, value in self.statistics.items():
+            self.saveStatistic(key)
 
-            if (SAVE_WHILE_RUNNING):
-                self.saveStatistic(key)
-            else:
-                localDir = self.folderPath + "/" + key
+    def _unpack(self, dirName):
 
-                data = value["data"]
-                chunks = int(len(data) / MAX_NUM_TO_FILE)
-                fileCtr = 0
-                filePrefix = localDir + "/d_"
-
-                for i in range(0, chunks):
-                    fileName = filePrefix + str(fileCtr)
-
-                    with open(fileName, "wb") as f:
-                        pickle.dump(data[i*MAX_NUM_TO_FILE : (i+1)*MAX_NUM_TO_FILE], f)
-                    fileCtr += 1
-
-                rem = len(data) % MAX_NUM_TO_FILE
-
-                if (rem):
-                    fileName = filePrefix + str(fileCtr)
-                    with open(fileName, "wb") as f:
-                        pickle.dump(data[-rem:], f)
-
-
-    def _unpack(self, dirPath, dirName):
+        dirPath = f"{self.folderPath}/{dirName}"
 
         self.statistics[dirName] = {}
         self.statistics[dirName]["data"] = []
@@ -109,83 +88,72 @@ class ClassCollector():
             self.statistics[dirName]["title"] = pickle.load(f)
         for file in os.listdir(dirPath):
             if "infoFile" not in file:
-
                 with open(dirPath + "/" + file, "rb") as f:
                     self.statistics[dirName]["data"].extend(pickle.load(f))
 
+    def load(self):
+        for folder in os.listdir(self.folderPath):
+            self._unpack(folder)
 
-    def load(self, dirName):
-        for folder in os.listdir(dirName):
-            self._unpack(dirName + "/" + folder, folder)
+    def summarize(self):
+        print(f"Data stored: {len(self.statistics)}\n")
 
-
-    def _averageStatOver(self, name, averageOver):
-
-        localAverageOver = averageOver
-        avg = []
-        data = self.statistics[name]["data"]
-
-        if (len(data) < localAverageOver):
-            print(f"{cm.WARNING} averageOver is larger than the data averaged over," +
-            f"defaulting it to 1. Plot titles will be incorrect as a result.{cm.NORMAL}")
-            localAverageOver = 1
-        elif (len(data) % localAverageOver):
-            print(f"{cm.WARNING} averageOver {localAverageOver} does not divide data of length " +
-            f"{len(data)} wholly, plots may be incorrect as a result.{cm.NORMAL}")
-
-        chunks = int(len(data) / localAverageOver)
-
-        for i in range(0, chunks):
-            avg.append(np.average(data[i*localAverageOver:(i+1)*localAverageOver]))
-
-        return avg
-
-
-    def readyPlot(self, averageOver, plots, shape = [2, 2], plotAll = True, *toPlot):
-
-        avgData = {}
-        maxSubPlots = shape[0] * shape[1]
-
-        if (plotAll):
-            for key, value in self.statistics.items():
-                avgData[value["title"]] = self._averageStatOver(key, averageOver)
-        else:
-            for stat in toPlot:
-                if stat in self.statistics:
-                    value = self.statistics[stat]
-                    avgData[value["title"]] = self._averageStatOver(stat, averageOver)
-                else:
-                    print(f"{cm.INFO}Could not find data for statistic {stat} in class" +
-                    f"{self.owner}{cm.NORMAL}")
-
-
-        plotCtr = 1
-
-        for title, data in avgData.items():
-
-            if (plotCtr == 1):
-                plt.figure(plots)
-
-            plt.subplot(shape[0], shape[1], plotCtr)
-            plt.plot(data)
-
-            plt.title(title + f", averaged over {averageOver} runs")
-            plotCtr += 1
-
-            if (plotCtr > maxSubPlots):
-                plotCtr = 1
-                plots += 1
+        for key, value in self.statistics.items():
+            print(f"statistic: {value['title']}")
+            print(f"name: {key}")
+            print(f"values recorded: {len(value['data'])}")
+            print("---\n")
 
 
 
-        if (plotCtr == 1):
-            return plots
-        else:
-            return plots + 1
+class RunCollector():
+
+    def __init__(self, run, savePath, loading = False):
+        self.runPath = f"{savePath}/run_{run}"
+        self.run = run
+
+        self.collectors = {}
+
+        if not loading:
+
+            try:
+                os.mkdir(self.runPath)
+            except OSError as e:
+                print(f"{cm.WARNING} Failed to create directory for data of run {run}. Data is lost...{cm.NORMAL}")
+                print(f"{cm.WARNING} error:\t{e}{cm.NORMAL}")
+                print(f"{cm.INFO}path:\t{self.runPath}{cm.NORMAL}")
+
+
+    def getClassCollector(self):
+        calledBy = inspect.stack()[2][0].f_locals["self"].__class__.__name__
+
+        if calledBy not in self.collectors:
+            self.collectors[calledBy] = ClassCollector(self.run, calledBy, self.runPath)
+
+        return self.collectors[calledBy]
+
+    def save(self):
+        for key, value in self.collectors.items():
+            value.save()
+
+    def load(self):
+        for cc in os.listdir(self.runPath):
+            self.collectors[cc] = ClassCollector(self.run, cc, self.runPath, True)
+            self.collectors[cc].load()
+
+    def summarize(self):
+        print(f"{cm.BACKED_C}-----------{cm.NORMAL}")
+        print(f"{cm.BACKED_C}   run {self.run}   {cm.NORMAL}")
+        print(f"{cm.BACKED_C}-----------{cm.NORMAL}")
+        for key, value in self.collectors.items():
+            print(f"{cm.BACKED_P}###Data found for: {key}{cm.NORMAL}\n")
+            value.summarize()
 
 
 
-#
+
+
+
 #   This class is concerned with storing data from all over the program
 #   It is a singleton class, so that all data gets collected at one point
 #
@@ -195,21 +163,37 @@ class StatCollector():
 
     __instance = None
 
+    loadedDir = None
+
+    currentRun = None
+
     @staticmethod
-    def getInstance(load = False):
+    def getInstance(loading = False):
         if StatCollector.__instance == None:
-            StatCollector(load)
+            StatCollector(loading)
         return StatCollector.__instance
 
-    def __init__(self, load):
+    def __init__(self, loading):
+        global SAVE_IN
+
         if StatCollector.__instance != None:
             raise Exception("This class is a singleton - access with getInstance() instead")
         else:
             StatCollector.__instance = self
-            self.collectors = {}
-            self.statistics = {}
 
-            if (not load):
+            if not loading:
+
+                #If another directory has been created in the same minute, then we modify the SAVE_IN
+                #until a free one has been found
+                tempPath = SAVE_IN
+                dirCount = 1
+
+                while (os.path.exists(tempPath)):
+                    tempPath = SAVE_IN + "#" + str(dirCount)
+                    dirCount += 1
+
+                SAVE_IN = tempPath
+
                 try:
                     os.mkdir(SAVE_IN)
                 except OSError:
@@ -220,69 +204,94 @@ class StatCollector():
                 except OSError:
                     print(f"{cm.WARNING} Failed to create rawData directory for data. Data is lost..{cm.NORMAL}")
 
+            self.runs = []
 
+    def startRun(self):
+        if self.currentRun == None:
+            self.currentRun = 0
+        else:
+            self.save()
+            self.currentRun += 1
 
-
-    def getClassCollector(self):
-        calledBy = inspect.stack()[1][0].f_locals["self"].__class__.__name__
-
-        if calledBy not in self.collectors:
-            self.collectors[calledBy] = ClassCollector(calledBy)
-
-        return self.collectors[calledBy]
-
-
+        self.runs.append(RunCollector(self.currentRun, f"{SAVE_IN}/rawData"))
 
     def save(self):
-        for key, value in self.collectors.items():
-            value.save(dirName)
+        self.runs[self.currentRun].save()
+
+    def getClassCollector(self):
+        return self.runs[self.currentRun].getClassCollector()
 
 
     def load(self, dirName):
+        if not os.path.exists(dirName):
+            print(f"{cm.WARNING} Could not find folder {dirName}, aborting loading...{cm.NORMAL}")
+
+        self.loadedDir = dirName
+
+        for run in os.listdir(dirName):
+            runFolder = dirName + "/" + run
+            loadedRun = RunCollector(len(self.runs), dirName, True)
+            self.runs.append(loadedRun)
+            loadedRun.load()
+
+
+
+    def loadLatest(self, dirName = DATA_ROOT):
+
+        lastDir = None
+        lastModification = 0
 
         for folder in os.listdir(dirName):
-            self.collectors[folder] = ClassCollector(folder, True)
-            self.collectors[folder].load(dirName + "/" + folder)
+            lmTemp = os.path.getmtime(f"{dirName}/{folder}")
 
+            if (lmTemp > lastModification):
+                lastModification = lmTemp
+                lastDir = folder
+
+        if lastDir is not None:
+            self.load(dirName + "/" + lastDir + "/rawData")
+        else:
+            print(f"{cm.WARNING}No folders found in directory {dirName} to open!{cm.NORMAL}")
+
+    def listFolders(self, dirName = DATA_ROOT):
+
+        for folder in os.listdir(dirName):
+            print(f"{cm.INFO}{dirName}/{folder}{cm.NORMAL}")
 
     def summarize(self):
-
         print(  f"{cm.NORMAL}\n\n"                  +
                 "----------------------------\n"    +
                 " Overview of data collected \n"    +
                 "----------------------------\n"
         )
 
-        for key, value in self.collectors.items():
-            print(f"{cm.BACKED_P}###Data found for: {key}{cm.NORMAL}\n")
+        print(f"{cm.INFO}Loaded from folder:\t{self.loadedDir}{cm.NORMAL}")
+        print(f"Runs:\t{len(self.runs)}\n\n")
 
-            for k2, v2 in value.getStatistics().items():
-                print(f"{cm.NORMAL}statistic: {v2['title']}{cm.NORMAL}")
-                print(f"{cm.NORMAL}name: {k2}{cm.NORMAL}")
-                print(f"{cm.NORMAL}values recorded: {len(v2['data'])}{cm.NORMAL}")
-                print("-----\n")
-            print("######\n")
+        for run in self.runs:
+            run.summarize()
 
-    def plot(self, averageOver = 1, shape = [2, 2]):
-        plots = 0
+    #TODO
+    #
+    #   def plotRun()
+    #
+    #   def plotCombined()
+    #
+    #
+    #
+    #   def plotCombinedClass()
+    #
+    #   def plotCombinedStatistic()
+    #
+    #
+    #
+    #
+    #
+    #
+    #
 
-        for key, value in self.collectors.items():
-            plots = value.readyPlot(averageOver, plots, shape)
 
-        plt.show()
-
-    def plotClass(self, className, averageOver = 1, shape = [2, 2]):
-
-        if className in self.collectors:
-            plots = self.collectors[className].readyPlot(averageOver, 0, shape)
-            plt.show()
-        else:
-            print(f"{cm.INFO}Could not find data for class {className}{cm.NORMAL}")
-
-    def plotStatistic(self, className, statName, averageOver = 1):
-
-        if className in self.collectors:
-            self.collectors[className].readyPlot(averageOver, 0, [1, 1], False, statName)
-            plt.show()
-        else:
-            print(f"{cm.INFO}Could not find data for class {className}{cm.NORMAL}")
+    #TODO make it so that models save in this folder by having the logicModule
+    #use this function to get the right directory
+    def getCurrentSaveFolder(self):
+        return SAVE_IN

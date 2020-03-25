@@ -10,18 +10,19 @@ class Environment():
 	ACTIONS = [ ["continue", 2], ["push", 5], ["ask", 4], ["alt", 10] ]
 
 	#Here we store for each combination of colors + types the action that resolves the situation
+	#'''
 	BESTACTIONS = { "red ball"   : 1 , "red box"   : 3, "red person"   : 2,
 					"green ball" : 1 , "green box" : 3, "green person" : 2,
 					"blue ball" : 1 , "blue box" : 3, "blue person" : 3,
 					"yellow ball" : 1 , "yellow box" : 3, "yellow person" : 2,
 					"none none" : 0
 	}
+	#'''
 
-
-	NO_FIELDS = 1
+	NO_FIELDS = 6
 
 	#In the simulation only one field is relevant for choosing the correct behaviour
-	RELEVANT_FIELD = 0
+	RELEVANT_FIELD = 4
 
 	SUCCESS_REWARD = 30
 	FAILURE_PUNISHMENT = 10
@@ -30,7 +31,20 @@ class Environment():
 	fields = []
 
 	def __init__(self):
+		#self._createRandomProblem()
 		pass
+
+	def _createRandomProblem(self):
+
+		self.BESTACTIONS = {}
+
+		for i in range(0, len(self.COLORS) - 1):
+			for j in range(0, len(self.TYPES) - 1):
+				self.BESTACTIONS[f"{COLORS[i]} {COLORS[j]}"] = np.random.randint(len(ACTIONS))
+
+		self.BESTACTIONS["none none"] = np.random.randint(len(ACTIONS))
+
+
 
 	def _createRandomState(self):
 		self.fields.clear()

@@ -18,6 +18,21 @@ class ExplorationPolicy():
 	def endSimulationUpdate(self):
 		pass
 
+
+
+
+class GreedyPolicy(ExplorationPolicy):
+
+	def __init__(self):
+		pass
+
+	def getAction(self, qValues):
+		return np.argmax(qValues)
+
+	def endSimulationUpdate(self):
+		pass
+
+
 class EpsilonGreedyPolicy(ExplorationPolicy):
 
 	#this function allows us to obtain an epsilon decay, which results in an epsilon of targetEpsilon at episode numEpisodes

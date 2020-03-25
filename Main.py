@@ -11,7 +11,7 @@
 
 from Environment import Environment
 from Agent import Agent
-from ExplorationPolicies import EpsilonGreedyPolicy
+from ExplorationPolicies import EpsilonGreedyPolicy, GreedyPolicy
 from LogicModules import QLearningTabModule, QLearningNeuralModule
 from Statistics import StatCollector
 
@@ -20,12 +20,27 @@ import numpy as np
 # To allow for easier reproducability
 np.random.seed(1)
 
-NUM_SIMULATIONS = 1_000_000
+NUM_SIMULATIONS = 200
 
+# Testing
 env = Environment()
 
-explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = EpsilonGreedyPolicy.getDecay(0.01, NUM_SIMULATIONS), minEpsilon = 0.001)
-lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0.9, learningRate = 0.1)
+for i in range(0, 2):
+
+    statC = StatCollector.getInstance()
+    statC.startRun()
+
+    explPolicy = EpsilonGreedyPolicy(epsilon = 0.01, decayRate = 0, minEpsilon = 0.001)
+    lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
+    agent = Agent(env, lm)
+    agent.train(NUM_SIMULATIONS)
+
+'''
+env = Environment()
+
+explPolicy = GreedyPolicy()
+#explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = EpsilonGreedyPolicy.getDecay(0.01, 1), minEpsilon = 0.001)
+lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
 #lm = QLearningTabModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
 
 
@@ -36,7 +51,7 @@ lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0.9,
 
 agent = Agent(env, lm)
 agent.train(NUM_SIMULATIONS)
-
+'''
 
 # StatCollector is a singleton class responsible for storing statistics from all sources for a run
 
