@@ -46,6 +46,59 @@ class Environment():
 
 
 
+	#TODO: Perhaps move to the agent? Allow a function for generating next state in env,
+	#and let the agent do the training/evaluation
+	def testAgainstAll(self, agent):
+
+		currentState = [0, 0] * self.NO_FIELDS
+		noColors = len(self.COLORS)
+		noTypes = len(self.TYPES)
+
+		#TODO: Give agent temporarily a greedy only module
+		score = 0
+		guesses = 0
+		while True:
+
+			#do the evaluation of current environment
+			action = agent.getAction(currentState)
+			relevantIdx = self.COLORS[currentState[2*self.RELEVANT_FIELD]] + " " + self.TYPES[currentState[2*self.RELEVANT_FIELD + 1]]
+
+
+			if self.BESTACTIONS[relevantIdx] == action:
+				score += 1
+			guesses += 1
+
+			#update environment
+
+			currentField = 0
+
+			while currentField < self.NO_FIELDS:
+				if (currentState[currentField*2] == noColors - 1 and currentState[currentField*2 + 1] == noTypes - 1):
+					#cannot update, need to increase currentField
+					currentState[currentField*2] = 0
+					currentState[currentField*2 + 1] = 0
+					currentField += 1
+				else:
+
+					if (currentState[currentField * 2] == noColors - 2 and currentState[currentField * 2  + 1] == noTypes - 2):
+							currentState[currentField*2] = noColors - 1
+							currentState[currentField*2 + 1] = noTypes - 1
+					elif (currentState[currentField * 2 + 1] < noTypes - 2):
+						currentState[currentField * 2  + 1] += 1
+					else:
+						currentState[currentField * 2] += 1
+						currentState[currentField * 2 + 1] = 0
+
+					break
+
+			if currentField >= self.NO_FIELDS:
+				break
+
+		print(f"accuracy: {score/guesses}")
+
+
+
+
 	def _createRandomState(self):
 		self.fields.clear()
 

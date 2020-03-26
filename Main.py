@@ -25,7 +25,7 @@ NUM_SIMULATIONS = 200
 # Testing
 env = Environment()
 
-for i in range(0, 2):
+for i in range(0, 1):
 
     statC = StatCollector.getInstance()
     statC.startRun()
@@ -33,7 +33,8 @@ for i in range(0, 2):
     explPolicy = EpsilonGreedyPolicy(epsilon = 0.01, decayRate = 0, minEpsilon = 0.001)
     lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
     agent = Agent(env, lm)
-    agent.train(NUM_SIMULATIONS)
+    #agent.train(NUM_SIMULATIONS)
+    env.testAgainstAll(agent)
 
 '''
 env = Environment()

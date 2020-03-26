@@ -70,3 +70,6 @@ class Agent():
 
 		statC.save()
 		#self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")
+
+	def getAction(self, state):
+		return self.logicModule.getAction(state)
