@@ -1,62 +1,85 @@
 #
-#   TODO: REFACTORING
-#           - Clean up statistics.py
+#   Statistics:
+#       TODO:   Move features from StatCollector w.r.t. plotting and such,
+#               to its own class
 #
-#   TODO: FEATURES
-#           - Add the ability to load a single class' data
-#           - Add the ability to load a single type of data collected
-#           - Add class storing settings ?
+#   allow getDecay to start at a non-1 value
 #
-
+#
 
 from Environment import Environment
 from Agent import Agent
 from ExplorationPolicies import EpsilonGreedyPolicy, GreedyPolicy
 from LogicModules import QLearningTabModule, QLearningNeuralModule
 from Statistics import StatCollector
+from ConsoleMessages import ConsoleMessages as cm
 
 import numpy as np
+import getopt
+import sys
+
+#Number of simulated problems per run
+NUM_SIMULATIONS = 200
+#Number of (independent) runs per program execution
+NUM_REPETITIONS = 1000
 
 # To allow for easier reproducability
-np.random.seed(1)
+RANDOM_SEED = 1
 
-NUM_SIMULATIONS = 200
 
-# Testing
+#Allow the user to change these variables instead of using their defaults
+
+try:
+    options = getopt.getopt(sys.argv[1:], "", ["numSimulations=", "numRepetitions=", "randomSeed="])
+    for o, a in options[0]:
+        print(o)
+        if o == "--numSimulations":
+            NUM_SIMULATIONS = int(a)
+        elif o == "--numRepetitions":
+            NUM_REPETITIONS = int(a)
+        elif o == "--randomSeed":
+            RANDOM_SEED = int(a)
+
+except getopt.GetoptError as err:
+    print(str(err))
+    exit(1)
+
+
+#Setup code
+
+np.random.seed(RANDOM_SEED)
 env = Environment()
+statC = StatCollector.getInstance()
 
-for i in range(0, 1):
+explPolicy = None
+lm = None
+agent = None
 
-    statC = StatCollector.getInstance()
+EPSILON_DECAY = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
+MIN_EPSILON = 0.01
+START_EPSILON = 1
+DISCOUNT_FACTOR = 0
+LEARNING_RATE = 0.01
+
+statC.startSession()
+#statC.addSessionData("random_seed", RANDOM_SEED)
+statC.addSessionData("sims_per_run", NUM_SIMULATIONS)
+statC.addSessionData("start_epsilon", START_EPSILON)
+statC.addSessionData("epsilon_decay", EPSILON_DECAY)
+statC.addSessionData("discount_factor", DISCOUNT_FACTOR)
+statC.addSessionData("learning_rate", LEARNING_RATE)
+statC.addSessionData("Model info", "2 x 32, min replay: 32, batch size: 16")
+
+#The simulations themselves
+for i in range(0, NUM_REPETITIONS):
+
+    print(f"{cm.BACKED_C} {i} out of {NUM_REPETITIONS} simulations done.{cm.NORMAL}")
+
+
     statC.startRun()
+    env.createRandomProblem()
 
-    explPolicy = EpsilonGreedyPolicy(epsilon = 0.01, decayRate = 0, minEpsilon = 0.001)
-    lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
+    explPolicy = EpsilonGreedyPolicy(epsilon = START_EPSILON, decayRate = EPSILON_DECAY, minEpsilon = MIN_EPSILON)
+    lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = DISCOUNT_FACTOR, learningRate = LEARNING_RATE)
     agent = Agent(env, lm)
-    #agent.train(NUM_SIMULATIONS)
-    env.testAgainstAll(agent)
-
-'''
-env = Environment()
-
-explPolicy = GreedyPolicy()
-#explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = EpsilonGreedyPolicy.getDecay(0.01, 1), minEpsilon = 0.001)
-lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
-#lm = QLearningTabModule(explorationPolicy = explPolicy, discountFactor = 0, learningRate = 1)
-
-
-# An agent is passed the environment and the logic module. The logic module is the brain for the agent,
-# which can be swapped out. The environment contains all information with regards to the environment,
-# such as which actions are valid and the size of the state-space. The agent reads this information from the environment
-# and passes this along to the logic module for setup
-
-agent = Agent(env, lm)
-agent.train(NUM_SIMULATIONS)
-'''
-
-# StatCollector is a singleton class responsible for storing statistics from all sources for a run
-
-#statC = StatCollector.getInstance()
-
-#statC.summarize()
-#statC.plotStatistics(averageOver = int(NUM_SIMULATIONS / 100))
+    agent.train(NUM_SIMULATIONS)

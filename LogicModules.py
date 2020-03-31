@@ -3,6 +3,7 @@ import random
 import time
 
 from ConsoleMessages import ConsoleMessages as cm
+from Statistics import StatCollector
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -38,6 +39,11 @@ class LogicModule():
 	def load(self, fileName):
 		pass
 
+	def getExplorationPolicy(self):
+		return self.explorationPolicy
+
+	def setExplorationPolicy(self, explorationPolicy):
+		self.explorationPolicy = explorationPolicy
 
 
 class QLearningTabModule(LogicModule):
@@ -102,13 +108,21 @@ class QLearningNeuralModule(LogicModule):
 
 	ONE_HOT_ENCODING = True
 
+	LAYERS = 2
+	NODES_IN_LAYER = 32
 
-	def __init__(self, explorationPolicy, discountFactor, learningRate, modelInFile = None, **kwargs):
+
+	def __init__(self, explorationPolicy, discountFactor, learningRate, minReplayMemorySize = 32, miniBatchSize = 16, layers = 2, nodesInLayer = 32):
 		self.explorationPolicy = explorationPolicy
 		self.DISCOUNT_FACTOR = discountFactor
 		self.LEARNING_RATE = learningRate
 
 		self.targetUpdateCounter = 0
+
+		self.MIN_REPLAY_MEMORY_SIZE = minReplayMemorySize
+		self.MINIBATCH_SIZE = miniBatchSize
+		self.LAYERS = layers
+		self.NODES_IN_LAYER = nodesInLayer
 
 		random.seed(1)
 
@@ -137,12 +151,23 @@ class QLearningNeuralModule(LogicModule):
 		print(f"{cm.INFO}Creating a CNN with input size {inSize}{cm.NORMAL}")
 		print(f"{cm.INFO}and output size {actionSize} {cm.NORMAL}")
 
+		#print(f"{cm.INFO}with {self.LAYERS} layers of {self.NODES_IN_LAYER} nodes{cm.NORMAL}")
+
 		model = Sequential()
+
+		#model.add(Dense(self.NODES_IN_LAYER, input_dim = inSize))
+		#model.add(Activation("elu"))
+
+		#for i in range(0, self.LAYERS - 1):
+		#	model.add(Dense(self.NODES_IN_LAYER))
+		#	model.add(Activation("elu"))
+
 		model.add(Dense(32, input_dim = inSize))
 		model.add(Activation("elu"))
 
-		model.add(Dense(8))
+		model.add(Dense(32))
 		model.add(Activation("elu"))
+
 
 		model.add(Dense(actionSize))
 		model.add(Activation("linear"))

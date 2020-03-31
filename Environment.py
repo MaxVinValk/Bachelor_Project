@@ -34,15 +34,15 @@ class Environment():
 		#self._createRandomProblem()
 		pass
 
-	def _createRandomProblem(self):
+	def createRandomProblem(self):
 
 		self.BESTACTIONS = {}
 
 		for i in range(0, len(self.COLORS) - 1):
 			for j in range(0, len(self.TYPES) - 1):
-				self.BESTACTIONS[f"{COLORS[i]} {COLORS[j]}"] = np.random.randint(len(ACTIONS))
+				self.BESTACTIONS[f"{self.COLORS[i]} {self.TYPES[j]}"] = np.random.randint(len(self.ACTIONS))
 
-		self.BESTACTIONS["none none"] = np.random.randint(len(ACTIONS))
+		self.BESTACTIONS["none none"] = np.random.randint(len(self.ACTIONS))
 
 
 

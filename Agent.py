@@ -4,6 +4,7 @@ from tqdm import tqdm
 from datetime import datetime
 from Statistics import StatCollector, ClassCollector
 from ConsoleMessages import ConsoleMessages as cm
+from ExplorationPolicies import GreedyPolicy
 
 SAVE_IN = "/media/max/88B5-59E2/data"
 MODEL_LOCATION = SAVE_IN + "/" + "qTable"
@@ -52,24 +53,31 @@ class Agent():
 			cc.updateStatistic("guessesOverTime", guesses)
 			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
-		#date = datetime.now().strftime('%m-%d_%H-%M')
-
-		'''
-		if (not os.path.exists(MODEL_LOCATION)):
-			try:
-				os.mkdir(MODEL_LOCATION)
-			except OSError:
-				print(f"{cm.WARNING} Failed to create directory for data. Data may be lost...")
-
-		if (not os.path.exists(DATA_LOCATION)):
-			try:
-				os.mkdir(DATA_LOCATION)
-			except OSError:
-				print(f"{cm.WARNING} Failed to create directory for model. Model may be lost...")
-		'''
-
 		statC.save()
-		#self.logicModule.save(MODEL_LOCATION + f"/qTable_{date}")
 
 	def getAction(self, state):
 		return self.logicModule.getAction(state)
+
+	def evaluate(self, numberOfRuns):
+
+		#first we swap out our exploration policy in the logic module to rate current performance
+		#of the learned behaviour
+		originalExplorationPolicy = self.logicModule.getExplorationPolicy()
+		self.logicModule.setExplorationPolicy(GreedyPolicy())
+
+		score = 0
+
+		#Generate numberOfRuns random simulations
+		for i in range(0, numberOfRuns):
+			self.environment.reset()
+			state = self.environment.getState()
+			action = self.logicModule.getAction(state)
+			origState, resState, reward, done = self.environment.performAction(action)
+
+			if done:
+				score += 1
+
+		#Give back the old exploration policy
+		self.logicModule.setExplorationPolicy(originalExplorationPolicy)
+
+		return score / numberOfRuns
