@@ -6,13 +6,16 @@ short descriptions of each file and usage information
 
 ## Useage
 
-In main, set the number of simulations you wish to run by setting NUM_SIMULATIONS.
-Here you can also set what kind of logic module (a module housing all the decision making
-logic) you want to pass to the agent, with what kind of exploration policy.
-At the moment, only tabular q-learning is functional as logic module, and only
-epsilon-greedy as exploration policy.
+When running the program, the following arguments can be provided:
+```
+python3 Main.py [--numSimulations NUMBER] [--numRepetitions NUMBER] [--randomSeed SEED] [--dataRoot root]
+```
+Which allows one to change the number of simulations per run, the amount of runs, the
+seed used for the RNG and the output folder for data respectively. 
 
-The output directory can be specified in Agent by setting SAVE_IN.
+For more in-depth changes, one can change the type of logic module and exploration policy within the code itself.
+At this moment, the QLearningNeuralModule and QLearningTabularModule are functioning logic modules.
+For exploration policies, Epsilon Greedy is supported as well as a greedy policy (used for evaluating the agent)
 
 ## Plotting the results
 
@@ -21,30 +24,46 @@ from a python3 console:
 ```python
 from Statistics.py import StatCollector
 sc = StatCollector.getInstance()
+sc.listFolders(dirName = None)
 sc.load(FOLDER_NAME)
-sc.plot(averageOver = 1, shape = [2, 2])
+sc.loadLatest(dirName = None)
+
+sc.plotRun(runIdx, averageOver = 1, shape = [2, 2], plotAll = True, *toPlot)
+sc.plotAverage(averageOver = 1, shape = [2, 2], plotAll = True, *toPlot)
 ```
 
-You can get information about the data held by using the summarize() function of
-StatCollector. FOLDER_NAME is the folder holding all the data for a run.
+The listFolders function returns a list of the folders in the provided directory, or if
+no argument is provided, the default output directory which can be viewed in the variable
+dataRoot of the class StatCollector. loadLatest loads the latest run in the folder
+provided, or if no folder is provided, the default output directory. The latest run is
+determined by latest modification to any folder in the provided directory.
+
+With regards to the plotting functions, plotRun allows one to select 1 specific run to plot.
+You can select it by providing as runIdx the run you want to plot.
+The plotAverage function averages all statistics of all runs and outputs the plots of that.
+The rest of the arguments that you can provide are the same:
 
 averageOver is an argument that you can specify to average over an interval instead
 of plotting each datapoint. This is especially useful when the amount of datapoints
 collected gets really large. The shape provided is the shape of the resulting plots.
 Data collected from separate classes will always be plotted on different graphs.
 At most shape[0] * shape[1] subplots will be plotted on a single graph.
+If one just wants to plot a (subset of) the data that has been collected, one can set plotAll
+to false and provide as additional arguments the names of the specific statistics one wishes to plot.
 
 Further, there are some additional functions:
 
 ```python
-sc.summarize()
-sc.plotClass(className, averageOver = 1, shape = [2, 2])
-sc.plotStatistic(className, statName, averageOver = 1):
+sc.summarize(detailed = False)
 ```
 
 The summarize function gives an overview of what data has been loaded in.
-The plotClass method allows one to plot all data from one class.
-The plotStatistic method allows one to plot one statistic from a particular class
+If detailed is set to true, it provides additional information on each run saved.
+
+##Other
+In case you want to merge multiple seperate sessions into 1, in the utils folder, there is a
+script provided that can do that. It is advised to only do this if the runs are performed with different
+seeds.
 
 ## Implementation details
 
@@ -99,5 +118,19 @@ cc.addStatistic("statistic name", "statistic title")
 cc.updateStatistic("statistic name", "value")
 ```
 
-After the program is done, use the save function of StatCollector and provide
-a folder to hold the data.
+It is also possible to register data that is about the entire session in general, 
+which can be done with addSessionData:
+
+```python
+statC = StatCollector.getInstance()
+sc.addSessionData("name", value)
+```
+
+When using the StatCollector for logging data, the before saving any data at all, one
+must call the startSession() function on the StatCollector instance. If you want to change
+the output directory for the data, this has to be done prior to this call, because after
+this call it will generate some additional folders if needed. Lastly, at the start of
+each run, the function startRun() has to be called on the StatCollector.
+
+###Utils/combiner.py
+A utility file allowing the combination of multiple runs

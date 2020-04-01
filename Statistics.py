@@ -346,6 +346,9 @@ class StatCollector():
 
             self.runs = []
 
+    def setDataRoot(self, dataRoot):
+        self.dataRoot = dataRoot
+
     def startSession(self):
 
          self.date = datetime.now().strftime('%m-%d_%H-%M')
@@ -442,6 +445,10 @@ class StatCollector():
         lastModification = 0
 
         for folder in os.listdir(dirName):
+
+            if os.path.isfile(f"{dirName}/{folder}"):
+                continue
+
             lmTemp = os.path.getmtime(f"{dirName}/{folder}")
 
             if (lmTemp > lastModification):

@@ -29,8 +29,10 @@ RANDOM_SEED = 1
 
 #Allow the user to change these variables instead of using their defaults
 
+statC = StatCollector.getInstance()
+
 try:
-    options = getopt.getopt(sys.argv[1:], "", ["numSimulations=", "numRepetitions=", "randomSeed="])
+    options = getopt.getopt(sys.argv[1:], "", ["numSimulations=", "numRepetitions=", "randomSeed=", "dataRoot="])
     for o, a in options[0]:
         print(o)
         if o == "--numSimulations":
@@ -39,6 +41,9 @@ try:
             NUM_REPETITIONS = int(a)
         elif o == "--randomSeed":
             RANDOM_SEED = int(a)
+        elif o == "--dataRoot":
+            statC.setDataRoot(str(a))
+
 
 except getopt.GetoptError as err:
     print(str(err))
@@ -49,7 +54,6 @@ except getopt.GetoptError as err:
 
 np.random.seed(RANDOM_SEED)
 env = Environment()
-statC = StatCollector.getInstance()
 
 explPolicy = None
 lm = None
@@ -62,7 +66,7 @@ DISCOUNT_FACTOR = 0
 LEARNING_RATE = 0.01
 
 statC.startSession()
-#statC.addSessionData("random_seed", RANDOM_SEED)
+statC.addSessionData("random_seed", RANDOM_SEED)
 statC.addSessionData("sims_per_run", NUM_SIMULATIONS)
 statC.addSessionData("start_epsilon", START_EPSILON)
 statC.addSessionData("epsilon_decay", EPSILON_DECAY)
