@@ -36,7 +36,7 @@ The listFolders function returns a list of the folders in the provided directory
 no argument is provided, the default output directory which can be viewed in the variable
 dataRoot of the class StatCollector. loadLatest loads the latest run in the folder
 provided, or if no folder is provided, the default output directory. The latest run is
-determined by latest modification to any folder in the provided directory.
+determined by latest modification to any folder in the provided directorya.
 
 With regards to the plotting functions, plotRun allows one to select 1 specific run to plot.
 You can select it by providing as runIdx the run you want to plot.
@@ -51,14 +51,34 @@ At most shape[0] * shape[1] subplots will be plotted on a single graph.
 If one just wants to plot a (subset of) the data that has been collected, one can set plotAll
 to false and provide as additional arguments the names of the specific statistics one wishes to plot.
 
-Further, there are some additional functions:
+## Getting the raw data
+```python
+r = sc.getRun(runIdx)
+data = sc.getStatistic(run, className, statisticName)
+runAvg = sc.averagedRun()
+data2 = runAvg.getStatistic(className, statisticName)
+```
+getRun returns the run at the specified index.
+If you want to have access to the stored data directly, one can get any statistic from any run (RunCollector instance)
+with the getStatistic function. Provide the className that stores the statistic you want, and the name
+of the desired statistic. If you want to get the averaged data, the runAvg function will get you
+a RunCollector object, which also has a function allowing you to get any statistic in it.
+
+## Information about loaded data
 
 ```python
 sc.summarize(detailed = False)
+sc.summarizeRun(runIdx)
+sc.summarizeGivenRun(run)
 ```
 
 The summarize function gives an overview of what data has been loaded in.
 If detailed is set to true, it provides additional information on each run saved.
+Using the summarizeRun function you can display information about an individual run by providing
+its index.
+Finally, using the summarizeGivenRun function, you can pass along a RunCollector object, and get
+information on it. This is especially useful for when you want to get an overview of the averaged
+run, as averagedRun() returns a RunCollector.
 
 ##Other
 In case you want to merge multiple seperate sessions into 1, in the utils folder, there is a

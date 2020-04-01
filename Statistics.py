@@ -501,10 +501,13 @@ class StatCollector():
 
 
     def summarizeRun(self, runIdx):
-        self._summarizeRun(self, self.runs[runIdx])
+        self.summarizeGivenRun(self.runs[runIdx])
 
-    def _summarizeRun(self, run):
+    def summarizeGivenRun(self, run):
         run.summarize()
+
+    def getRun(self, runIdx):
+        return self.runs[runIdx]
 
     #Combines in 1 run the statistics of all runs
     #by averaging values at the storage index
