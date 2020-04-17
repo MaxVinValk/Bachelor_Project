@@ -2,6 +2,7 @@ import numpy as np
 
 from ConsoleMessages import ConsoleMessages as cm
 from Statistics import StatCollector, ClassCollector
+from RunSettings import GlobalSettings
 # Exploration modules
 
 class ExplorationPolicy():
@@ -59,11 +60,12 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			decayMode = self.VALID_DECAY_MODES[0]
 		self.decayMode = decayMode
 
-		print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
+		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
+			print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
 
-		statC = StatCollector.getInstance()
-		self.cc = statC.getClassCollector()
-		self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
+		#statC = StatCollector.getInstance()
+		#self.cc = statC.getClassCollector()
+		#self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
 
 	def updateEpsilon(self):
 
@@ -78,7 +80,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 
 	def endSimulationUpdate(self):
 		#statC = StatCollector.getInstance()
-		self.cc.updateStatistic("epsilonOverTime", self.epsilon)
+		#self.cc.updateStatistic("epsilonOverTime", self.epsilon)
 
 		self.updateEpsilon()
 

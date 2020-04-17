@@ -4,6 +4,7 @@ import time
 
 from ConsoleMessages import ConsoleMessages as cm
 from Statistics import StatCollector
+from RunSettings import GlobalSettings
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -53,7 +54,8 @@ class QLearningTabModule(LogicModule):
 		self.LEARNING_RATE = learningRate
 		self.tableInFile = tableInFile
 
-		print(f"{cm.NORMAL}Initialized Tabular Q-Learning with discount Factor: {discountFactor} and learning Rate: {learningRate}")
+		if (GlobalSettings.printMode == GlobalSettings.printMode[0]):
+			print(f"{cm.NORMAL}Initialized Tabular Q-Learning with discount Factor: {discountFactor} and learning Rate: {learningRate}")
 
 
 		super(QLearningTabModule, self).__init__(explorationPolicy)
@@ -148,25 +150,25 @@ class QLearningNeuralModule(LogicModule):
 		else:
 			inSize = len(stateDims)
 
-		print(f"{cm.INFO}Creating a CNN with input size {inSize}{cm.NORMAL}")
-		print(f"{cm.INFO}and output size {actionSize} {cm.NORMAL}")
-
-		#print(f"{cm.INFO}with {self.LAYERS} layers of {self.NODES_IN_LAYER} nodes{cm.NORMAL}")
+		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
+			print(f"{cm.INFO}Creating a CNN with input size {inSize}{cm.NORMAL}")
+			print(f"{cm.INFO}and output size {actionSize} {cm.NORMAL}")
+			print(f"{cm.INFO}with {self.LAYERS} layers of {self.NODES_IN_LAYER} nodes{cm.NORMAL}")
 
 		model = Sequential()
 
-		#model.add(Dense(self.NODES_IN_LAYER, input_dim = inSize))
+		model.add(Dense(self.NODES_IN_LAYER, input_dim = inSize))
+		model.add(Activation("elu"))
+
+		for i in range(0, self.LAYERS - 1):
+			model.add(Dense(self.NODES_IN_LAYER))
+			model.add(Activation("elu"))
+
+		#model.add(Dense(32, input_dim = inSize))
 		#model.add(Activation("elu"))
 
-		#for i in range(0, self.LAYERS - 1):
-		#	model.add(Dense(self.NODES_IN_LAYER))
-		#	model.add(Activation("elu"))
-
-		model.add(Dense(32, input_dim = inSize))
-		model.add(Activation("elu"))
-
-		model.add(Dense(32))
-		model.add(Activation("elu"))
+		#model.add(Dense(32))
+		#model.add(Activation("elu"))
 
 
 		model.add(Dense(actionSize))
@@ -264,8 +266,6 @@ class QLearningNeuralModule(LogicModule):
 
 	def endSimulationUpdate(self):
 		self.explorationPolicy.endSimulationUpdate()
-
-
 
 
 	def save(self, fileName):

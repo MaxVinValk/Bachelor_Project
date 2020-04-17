@@ -1,4 +1,5 @@
 import numpy as np
+from RunSettings import GlobalSettings
 
 #TODO: Read these parameters from a configuration file
 
@@ -94,7 +95,8 @@ class Environment():
 			if currentField >= self.NO_FIELDS:
 				break
 
-		print(f"accuracy: {score/guesses}")
+		if (GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]):
+			print(f"accuracy: {score/guesses}")
 
 
 

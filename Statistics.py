@@ -16,6 +16,7 @@ from ConsoleMessages import ConsoleMessages as cm
 class StatSettings():
 
     outputData = True
+    logging = True
 
     def __init__(self):
         pass
@@ -25,6 +26,13 @@ class StatSettings():
 
     def disableDataOutput(self):
         self.outputData = False
+
+    def enableLogging(self):
+        self.logging = True
+
+    def disableLogging(self):
+        self.logging = False
+
 
 
 class ClassCollector():
@@ -55,6 +63,9 @@ class ClassCollector():
 
     def addStatistic(self, name, title):
 
+        if not self.settings.logging:
+            return
+
         if name not in self.statistics:
             self.statistics[name] = {"title" : title, "data" : [], "files" : 0}
 
@@ -72,6 +83,9 @@ class ClassCollector():
             pickle.dump(title, f)
 
     def updateStatistic(self, name, value):
+
+        if not self.settings.logging:
+            return
 
         if name in self.statistics:
             self.statistics[name]["data"].append(value)
@@ -351,35 +365,42 @@ class StatCollector():
 
     def startSession(self):
 
-         self.date = datetime.now().strftime('%m-%d_%H-%M')
-         self.saveIn = self.dataRoot + "/" + self.date
+        if not self.settings.logging:
+            return
 
-         if not self.settings.outputData:
-             return
+        self.date = datetime.now().strftime('%m-%d_%H-%M')
+        self.saveIn = self.dataRoot + "/" + self.date
 
-         #If another directory has been created in the same minute, then we modify the saveIn
-         #until a free one has been found
-         tempPath = self.saveIn
-         dirCount = 1
+        if not self.settings.outputData:
+            return
 
-         while (os.path.exists(tempPath)):
-             tempPath = self.saveIn + "#" + str(dirCount)
-             dirCount += 1
+        #If another directory has been created in the same minute, then we modify the saveIn
+        #until a free one has been found
+        tempPath = self.saveIn
+        dirCount = 1
 
-         self.saveIn = tempPath
+        while (os.path.exists(tempPath)):
+            tempPath = self.saveIn + "#" + str(dirCount)
+            dirCount += 1
 
-         try:
-             os.mkdir(self.saveIn)
-         except OSError:
-             print(f"{cm.WARNING} Failed to create root directory for data. Data is lost..{cm.NORMAL}")
+        self.saveIn = tempPath
 
-         try:
-             os.mkdir(self.saveIn + "/rawData")
-         except OSError:
-             print(f"{cm.WARNING} Failed to create rawData directory for data. Data is lost..{cm.NORMAL}")
+        try:
+            os.mkdir(self.saveIn)
+        except OSError:
+            print(f"{cm.WARNING} Failed to create root directory for data. Data is lost..{cm.NORMAL}")
+
+        try:
+            os.mkdir(self.saveIn + "/rawData")
+        except OSError:
+            print(f"{cm.WARNING} Failed to create rawData directory for data. Data is lost..{cm.NORMAL}")
 
 
     def startRun(self):
+
+        if not self.settings.logging:
+            return
+
         if self.currentRun == None:
             self.currentRun = 0
         else:
@@ -402,6 +423,7 @@ class StatCollector():
 
 
     def getClassCollector(self):
+
         return self.runs[self.currentRun].getClassCollector()
 
     def getStatistic(self, run, className, statisticName):

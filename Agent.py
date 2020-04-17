@@ -5,6 +5,7 @@ from datetime import datetime
 from Statistics import StatCollector, ClassCollector
 from ConsoleMessages import ConsoleMessages as cm
 from ExplorationPolicies import GreedyPolicy
+from RunSettings import GlobalSettings
 
 SAVE_IN = "/media/max/88B5-59E2/data"
 MODEL_LOCATION = SAVE_IN + "/" + "qTable"
@@ -15,23 +16,24 @@ class Agent():
 		self.environment = environment
 		self.logicModule = logicModule
 
-
-
 		stateDims, actionSize = environment.getEnvParams()
 
 		logicModule.setupModule(stateDims, actionSize)
 
 	def train(self, numSimulations):
 
-		statC = StatCollector.getInstance()
+		#statC = StatCollector.getInstance()
+		#cc = statC.getClassCollector()
 
-		cc = statC.getClassCollector()
+		#cc.addStatistic("rewardsOverTime", "Rewards received over time")
+		#cc.addStatistic("guessesOverTime", "Number of guesses over time")
+		#cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
-		cc.addStatistic("rewardsOverTime", "Rewards received over time")
-		cc.addStatistic("guessesOverTime", "Number of guesses over time")
-		cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
+		runningAccuracy = 0
 
-		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation"):
+		disableProgress = GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]
+
+		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation", disable = disableProgress):
 			self.environment.reset()
 			done = False
 
@@ -49,11 +51,16 @@ class Agent():
 
 			self.logicModule.endSimulationUpdate()
 
-			cc.updateStatistic("rewardsOverTime", collectiveReward)
-			cc.updateStatistic("guessesOverTime", guesses)
-			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+			#cc.updateStatistic("rewardsOverTime", collectiveReward)
+			#cc.updateStatistic("guessesOverTime", guesses)
 
-		statC.save()
+			acc = 1 / guesses
+			#cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+
+			runningAccuracy += acc / numSimulations
+
+		#statC.save()
+		return runningAccuracy
 
 	def getAction(self, state):
 		return self.logicModule.getAction(state)
