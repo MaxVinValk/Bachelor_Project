@@ -67,10 +67,10 @@ class GenePool():
             }
 
     def createLogicModule(gene):
-        #TODO: Encode expl. policy params
-        decay = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.05, numEpisodes = 100)
+        #TODO: Encode expl. policy params ?
+        decay = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
 
-        explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = decay, minEpsilon = 0.05)
+        explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = decay, minEpsilon = 0.01)
         return QLearningNeuralModule(explPolicy, 0, gene["learningRate"],
                                     gene["minReplayMemorySize"], gene["miniBatchSize"],
                                     gene["layers"], gene["nodesInLayer"])
@@ -101,7 +101,7 @@ class GenePool():
             totalScore += gene[0]
 
         if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
-            print(f"Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
+            print(f"[OWN_OUT] Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
 
         for i in range(0, self.ELITISM):
             newGenes.append(self.genePool[i])
@@ -122,6 +122,7 @@ class GenePool():
 
         for gene in newGenes:
             self.mutateGene(gene[1])
+            self.enforceBounds(gene[1])
 
         self.genePool = newGenes
         self.currentGen += 1
@@ -191,13 +192,12 @@ class GenePool():
                     #We update the new value and make certain it is in the correct range
                     gene[key] = self.setInRange(gene[key] + mutateBy, geneInfo["minValue"], geneInfo["maxValue"])
 
-                    #Here we apply a relational constraint between 2 fields
-                    if (key == "miniBatchSize"):
-                        if (gene[key] > gene["minReplayMemorySize"]):
-                            gene[key] = gene["minReplayMemorySize"]
-                    elif (key == "minReplayMemorySize"):
-                        if (gene[key] < gene["miniBatchSize"]):
-                            gene[key] = gene["miniBatchSize"]
+    def enforceBounds(self, gene):
+         #There is an additional constraint: miniBatchSize <= minReplayMemorySize
+         for key, value in gene.items():
+             if key == "miniBatchSize":
+                 if (value > gene["minReplayMemorySize"]):
+                     gene[key] = gene["minReplayMemorySize"]
 
 
     def setInRange(self, value, min, max):
@@ -256,6 +256,9 @@ class GenePool():
                 self.COPIED = pickle.load(f)
                 self.OFFSPRING = pickle.load(f)
                 self.MUTATE_CHANCE = pickle.load(f)
+
+            if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
+                print("[OWN_OUT] ####Restarting from file")
 
             return True
 

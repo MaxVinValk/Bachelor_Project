@@ -214,6 +214,12 @@ class QLearningNeuralModule(LogicModule):
 		if len(self.replayMemory) < self.MIN_REPLAY_MEMORY_SIZE:
 			return
 
+		#This is bugtesting:
+		if (self.MINIBATCH_SIZE > self.MIN_REPLAY_MEMORY_SIZE):
+			print(f"{cm.WARNING}Minibatch size:\t\t{self.MINIBATCH_SIZE}")
+			print(f"{cm.WARNING}replaymemory size:\t\t{self.MIN_REPLAY_MEMORY_SIZE}")
+			print(f"{cm.WARNING}in memory current::\t\t {len(self.replayMemory)}{cm.NORMAL}")
+
 		#this may cause the current batch to contain the current experience twice.
 		miniBatch = random.sample(self.replayMemory, self.MINIBATCH_SIZE-1)
 		miniBatch.append(currentExperience)
