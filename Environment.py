@@ -1,6 +1,8 @@
 import numpy as np
 from RunSettings import GlobalSettings
 
+from ConsoleMessages import ConsoleMessages as cm
+
 #TODO: Read these parameters from a configuration file
 
 class Environment():
@@ -28,12 +30,43 @@ class Environment():
 	SUCCESS_REWARD = 30
 	FAILURE_PUNISHMENT = 10
 
+	#A flag which, when disabled, uses a memory of generated cases.
+	#This is relevant for when we are comparing multiple agents on performance
+	USE_SETS = False
+
+	#When use sets is set, use train is used to determine if the validation or training
+	#set should be used.
+	USE_TRAIN = False
+	trainSet = []
+	trainIndex = 0
+	validationSet = []
+	validationIndex = 0
+
 	#The observed objects present
 	fields = []
 
 	def __init__(self):
 		#self._createRandomProblem()
 		pass
+
+	#Used to generate a training and validation set which is used for genetic algorithms
+	def initSets(self, lengthTrain, lengthValidation):
+
+		self.USE_SETS = True
+
+		self.trainIndex = 0
+		self.validationIndex = 0
+		self.trainSet = []
+		self.validationSet = []
+
+		for i in range(0, lengthTrain):
+			self.trainSet.append(self._createRandomState())
+
+		for i in range(0, lengthValidation):
+			self.validationSet.append(self._createRandomState())
+
+	def setUseTrain(self, value):
+		self.USE_TRAIN = value
 
 	def createRandomProblem(self):
 
@@ -44,7 +77,6 @@ class Environment():
 				self.BESTACTIONS[f"{self.COLORS[i]} {self.TYPES[j]}"] = np.random.randint(len(self.ACTIONS))
 
 		self.BESTACTIONS["none none"] = np.random.randint(len(self.ACTIONS))
-
 
 
 	#TODO: Perhaps move to the agent? Allow a function for generating next state in env,
@@ -102,7 +134,8 @@ class Environment():
 
 
 	def _createRandomState(self):
-		self.fields.clear()
+		#self.fields.clear()
+		newProblem = []
 
 		for i in range(self.NO_FIELDS):
 
@@ -114,8 +147,10 @@ class Environment():
 				obstacleCol = np.random.randint(0, len(self.COLORS) - 1)
 				obstacleType = np.random.randint(0, len(self.TYPES) - 1)
 
-			self.fields.append(obstacleCol)
-			self.fields.append(obstacleType)
+			newProblem.append(obstacleCol)
+			newProblem.append(obstacleType)
+
+		return newProblem
 
 	def getState(self):
 		return self.fields
@@ -123,8 +158,6 @@ class Environment():
 	# +1 for the NONE NONE state
 	def getEnvParams(self):
 		return [len(self.COLORS), len(self.TYPES)]*self.NO_FIELDS, len(self.ACTIONS)
-
-
 
 	def performAction(self, action):
 
@@ -152,4 +185,16 @@ class Environment():
 		return currentState, nextState, reward, done
 
 	def reset(self):
-		self._createRandomState()
+		if (not self.USE_SETS):
+			self.fields = self._createRandomState()
+		else:
+			if self.USE_TRAIN:
+				self.fields = self.trainSet[self.trainIndex]
+				self.trainIndex += 1
+			else:
+				self.fields = self.validationSet[self.validationIndex]
+				self.validationIndex += 1
+
+	def resetSetIndexes(self):
+		self.trainIndex = 0
+		self.validationIndex = 0

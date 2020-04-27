@@ -21,7 +21,7 @@ import sys
 #Number of simulated problems per run
 NUM_SIMULATIONS = 200
 #Number of (independent) runs per program execution
-NUM_REPETITIONS = 1000
+NUM_REPETITIONS = 250
 
 # To allow for easier reproducability
 RANDOM_SEED = 1
@@ -49,6 +49,8 @@ except getopt.GetoptError as err:
     print(str(err))
     exit(1)
 
+print(f"{cm.WARNING} Have you re-enabled data collection?")
+
 
 #Setup code
 
@@ -63,7 +65,12 @@ EPSILON_DECAY = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes =
 MIN_EPSILON = 0.01
 START_EPSILON = 1
 DISCOUNT_FACTOR = 0
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.0001
+
+MIN_REPLAY_MEMORY_SIZE = 157
+MINIBATCH_SIZE = 56
+LAYERS = 3
+NODES_IN_LAYER = 2
 
 statC.startSession()
 statC.addSessionData("random_seed", RANDOM_SEED)
@@ -84,6 +91,10 @@ for i in range(0, NUM_REPETITIONS):
     env.createRandomProblem()
 
     explPolicy = EpsilonGreedyPolicy(epsilon = START_EPSILON, decayRate = EPSILON_DECAY, minEpsilon = MIN_EPSILON)
-    lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = DISCOUNT_FACTOR, learningRate = LEARNING_RATE)
+    lm = QLearningNeuralModule( explorationPolicy = explPolicy, discountFactor = DISCOUNT_FACTOR, learningRate = LEARNING_RATE,
+                                minReplayMemorySize = MIN_REPLAY_MEMORY_SIZE, miniBatchSize = MINIBATCH_SIZE,
+                                layers = LAYERS, nodesInLayer = NODES_IN_LAYER)
+
+    #lm = QLearningNeuralModule(explorationPolicy = explPolicy, discountFactor = DISCOUNT_FACTOR, learningRate = LEARNING_RATE)
     agent = Agent(env, lm)
     agent.train(NUM_SIMULATIONS)

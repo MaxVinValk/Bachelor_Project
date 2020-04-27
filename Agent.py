@@ -29,8 +29,8 @@ class Agent():
 		#cc.addStatistic("guessesOverTime", "Number of guesses over time")
 		#cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
+		self.environment.setUseTrain(True)
 		runningAccuracy = 0
-
 		disableProgress = GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]
 
 		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation", disable = disableProgress):
@@ -66,7 +66,7 @@ class Agent():
 		return self.logicModule.getAction(state)
 
 	def evaluate(self, numberOfRuns):
-
+		self.environment.setUseTrain(False)
 		#first we swap out our exploration policy in the logic module to rate current performance
 		#of the learned behaviour
 		originalExplorationPolicy = self.logicModule.getExplorationPolicy()

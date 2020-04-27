@@ -154,7 +154,10 @@ class ClassCollector():
 
                 if (len(dataOwn) != len(dataOther)):
                     print(f"{cm.INFO}attempted sum of two class collectors who do not hold same" +
-                    f"amount of values {cm.NORMAL}")
+                    f" amount of values")
+                    print(f"On: {key}, len self: {len(dataOwn)}, len other: {len(dataOther)}") 
+
+                    print(f"{cm.NORMAL}")
                 else:
                     for i in range(0, len(dataOwn)):
                         dataOwn[i] += dataOther[i]
@@ -309,7 +312,6 @@ class RunCollector():
 
         for key, value in self.collectors.items():
             plots = value.readyPlot(averageOver, plots, shape, plotAll, *toPlot)
-
         plt.show()
 
     def getStatistic(self, className, statisticName):

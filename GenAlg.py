@@ -48,14 +48,21 @@ class GenePool():
     genePool = []
     currentGen = 0
 
+    #To keep track of which run this is, for use in repeated runs
+    runCtr = 0
+
     GENE_POOL_SIZE = 64
-    ELITISM = 4
-    COPIED = 8
+    ELITISM = 8
+    COPIED = 12
     OFFSPRING = GENE_POOL_SIZE - COPIED - ELITISM
     MUTATE_CHANCE = 0.05
 
     MUTATE_RANDOM = False
+
     MUTATE_CHANGE = 10
+
+    #Sigma is used to scale mutation of continuous variables
+    SIGMA = 0.1
 
     #Note: There is an additional constraint: miniBatchSize >= minReplayMemorySize
     #TODO: Can't we remove the value type and use instanceof(numbers.Real) ?
@@ -86,9 +93,54 @@ class GenePool():
         self.initRandom()
 
     def initRandom(self):
+        self.genePool = []
         for i in range(0, self.GENE_POOL_SIZE):
             self.genePool.append([0, self.randomGene()])
 
+
+    #employing changes:
+    # gaussian noise in mutation
+    # only mutation for the copied parents
+    # reproduce using arithmic crossover
+    def evolveNew(self):
+        self.genePool.sort(reverse = True, key = itemgetter(0))
+
+        newGenes = []
+
+        #calculate total score:
+        totalScore = 0
+        for gene in self.genePool:
+            totalScore += gene[0]
+
+        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
+            print(f"[OWN_OUT] Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
+
+        for i in range(0, self.ELITISM):
+            newGenes.append(self.genePool[i])
+
+        for i in range(0, self.COPIED):
+            selectedGene = self.genePool[self.selectGene(self.genePool, totalScore)]
+            self.mutateGeneNew(selectedGene[1])
+            newGenes.append(selectedGene)
+
+        for i in range(0, int(self.OFFSPRING/2)):
+            firstParent = self.selectGene(self.genePool, totalScore)
+            secondParent = self.selectGene(self.genePool, totalScore)
+
+            while firstParent == secondParent:
+                secondParent = self.selectGene(self.genePool, totalScore)
+
+            firstChild, secondChild = self.createOffspring(self.genePool[firstParent], self.genePool[secondParent])
+            newGenes.append(firstChild)
+            newGenes.append(secondChild)
+
+        #ensure all values are valid
+        for gene in newGenes:
+            self.enforceBounds(gene[1])
+
+        self.genePool = newGenes
+        self.currentGen += 1
+        self.savePool()
 
     def evolve(self):
         self.genePool.sort(reverse = True, key = itemgetter(0))
@@ -128,7 +180,6 @@ class GenePool():
         self.currentGen += 1
         self.savePool()
 
-
     def createOffspring(self, firstParent, secondParent):
         firstChild = [0, {}]
         secondChild = [0, {}]
@@ -164,6 +215,20 @@ class GenePool():
 
         #should not be reached but a failsafe
         return len(genePool) - 1
+
+    def mutateGeneNew(self, gene):
+        for key, value in gene.items():
+            if np.random.uniform(0, 1) < self.MUTATE_CHANCE:
+                geneInfo = self.GENES[key]
+
+                if geneInfo["type"] == "float":
+                    #gaussian
+                    change = np.random.normal() * self.SIGMA
+                    gene[key] = self.setInRange(gene[key] + change, geneInfo["minValue"], geneInfo["maxValue"])
+
+                elif geneInfo["type"] == "int":
+                    #select at random
+                    self.setToRandomValue(gene, key, self.GENES[key])
 
 
     def mutateGene(self, gene):
@@ -228,6 +293,15 @@ class GenePool():
 
         gene[name] = newValue
 
+    #To call at the beginning of a run
+    #assumes that the current runidx has not been started yet
+    def startRun(self):
+        os.mkdir(f"genepool/run_{self.runCtr}")
+
+    def endRun(self):
+        self.runCtr += 1
+
+
     #deals with restarting the program if it has been interrupted
     def restart(self):
 
@@ -245,12 +319,13 @@ class GenePool():
                 pickle.dump(self.OFFSPRING, f)
                 pickle.dump(self.MUTATE_CHANCE, f)
 
+            #self.savePool()
             return False
         else:
             self.loadPool()
 
             with open("genepool/infoFile", "rb") as f:
-                self.currentGen = pickle.load(f) + 1
+                self.currentGen = pickle.load(f)
                 self.GENE_POOL_SIZE = pickle.load(f)
                 self.ELITISM = pickle.load(f)
                 self.COPIED = pickle.load(f)
@@ -263,7 +338,7 @@ class GenePool():
             return True
 
     def savePool(self):
-        name = f"genepool/genes_gen_{self.currentGen}_{datetime.now().strftime('%m_%d - %H_%M_%S')}"
+        name = f"genepool/run_{self.runCtr}/genes_gen_{self.currentGen}_{datetime.now().strftime('%m_%d - %H_%M_%S')}"
 
         with open("genepool/infoFile", "wb") as f:
             pickle.dump(self.currentGen, f)
@@ -279,23 +354,37 @@ class GenePool():
 
     def loadPool(self):
 
+        #Get latest folder:
+        latestNo = 0
+
+        for file in os.listdir("genepool"):
+            if os.path.isfile(f"genepool/{file}"):
+                continue
+            if "run_" in file:
+                no = int(file[4:])
+                if no > latestNo:
+                    latestNo = no
+
+        runFolder = f"genepool/run_{latestNo}"
+        self.runCtr = latestNo
+
         lastFile = None
         lastModification = 0
 
-        for file in os.listdir("genepool"):
+        for file in os.listdir(runFolder):
 
-            if os.path.isdir(f"genepool/{file}"):
+            if os.path.isdir(f"{runFolder}/{file}"):
                 continue
 
             if "infoFile" == file:
                 continue
 
-            lmTemp = os.path.getmtime(f"genepool/{file}")
+            lmTemp = os.path.getmtime(f"{runFolder}/{file}")
 
             if (lmTemp > lastModification):
                 lastModification = lmTemp
                 lastFile = file
         print(f"lastFile: {lastFile}")
         if lastFile is not None:
-            with open(f"genepool/{lastFile}", "rb") as f:
+            with open(f"{runFolder}/{lastFile}", "rb") as f:
                 self.genePool = pickle.load(f)

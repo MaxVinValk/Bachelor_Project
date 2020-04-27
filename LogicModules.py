@@ -131,6 +131,11 @@ class QLearningNeuralModule(LogicModule):
 
 	def setupModule(self, stateDims, actionSize):
 
+		self.LEARNING_RATE = 0.02798532247789199
+		self.MIN_REPLAY_MEMORY_SIZE = 123
+		self.MINIBATCH_SIZE = 88
+		self.NODES_IN_LAYER = 26
+
 		self.stateDims = np.array(stateDims)
 
 		self.model = self._createModel(stateDims, actionSize)

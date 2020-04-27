@@ -28,11 +28,14 @@ import os
 
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
+#Number of repetitions of the genetic pool run
+NUM_REPS = 4
+
 #Number of simulated problems per run
 NUM_SIMULATIONS = 200
 #Number of (independent) genepool runs per program execution
-NUM_GENS = 1
-GENE_POOL_SIZE = 64
+NUM_GENS = 2
+GENE_POOL_SIZE = 24
 
 #Processes to be spawned. GENE_POOL_SIZE needs to be divisible by this if
 # evaluateGenes is used.
@@ -58,8 +61,10 @@ def evaluateGenesWorker(workerId, env, inQueue, outQueue):
 
         gene = geneWithScore[1]
         lm = GenePool.createLogicModule(gene)
-        agent = Agent(env, lm)
 
+        env.resetSetIndexes()
+
+        agent = Agent(env, lm)
         learningOverall = agent.train(NUM_SIMULATIONS)
         approxAcc = agent.evaluate(NUM_EVALS)
         geneWithScore[0] = approxAcc + learningOverall
@@ -73,32 +78,7 @@ def evaluateGenesWorker(workerId, env, inQueue, outQueue):
         outQueue.put(geneWithScore)
 
 
-
-
-
-
-def evaluateGenes(genes, lowIdx, highIdx, env, outQueue):
-    for i in range(lowIdx, highIdx):
-        gene = genes[i][1]
-        lm = GenePool.createLogicModule(gene)
-        agent = Agent(env, lm)
-
-        learningOverall = agent.train(NUM_SIMULATIONS)
-        approxAcc = agent.evaluate(NUM_EVALS)
-        genes[i][0] = approxAcc + learningOverall
-
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
-            print(f"score: {pool.genePool[i][0]}")
-
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
-            print(f"[OWN_OUT] \t{datetime.now().strftime('%m/%d - %H:%M:%S')} Finished simulation for gene {i}")
-
-    outQueue.put(genes[lowIdx:highIdx])
-
-
-
 if __name__ == '__main__':
-
 
     #Allow the user to change these variables instead of using their defaults
 
@@ -112,71 +92,65 @@ if __name__ == '__main__':
     env = Environment()
     pool = GenePool(genePoolSize = GENE_POOL_SIZE)
 
-    if (pool.restart() == False):
-        pool.savePool()
+    hasRestarted = pool.restart()
 
     explPolicy = None
     lm = None
     agent = None
 
+    #The number of repetitions:
+    for i in range(pool.runCtr, NUM_REPS):
+        #Normally we want to reset each run the currentGen,
+        #Except if we started loading again from a file
+        if not hasRestarted:
+            pool.startRun()
+            pool.currentGen = 0
+            pool.initRandom()
+            pool.savePool()
+        else:
+            hasRestarted = False
 
-    #The simulations themselves
-    for i in range(pool.currentGen, NUM_GENS):
+        #The simulations themselves
+        for i in range(pool.currentGen, NUM_GENS):
 
-        #split
+            #split
 
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
-            print(f"{cm.BACKED_C} {i} out of {NUM_GENS} simulations done.{cm.NORMAL}")
+            if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
+                print(f"{cm.BACKED_C} {i} out of {NUM_GENS} simulations done.{cm.NORMAL}")
 
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
-            print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Performing simulation {i} out of {NUM_GENS}")
+            if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
+                print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Performing simulation {i} out of {NUM_GENS}")
 
-        genes = pool.genePool
-        env.createRandomProblem()
+            genes = pool.genePool
+            env.createRandomProblem()
+            env.initSets(200, 10_000)
 
-        #Divide the genes to processes
+            #Divide the genes to processes
 
-        #New method: Using a problem queue
-        outQueue = mp.Queue()
-        inQueue = mp.Queue()
-        processes = []
+            #New method: Using a problem queue
+            outQueue = mp.Queue()
+            inQueue = mp.Queue()
+            processes = []
 
-        print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Setting up gene queue")
-        for gene in genes:
-            inQueue.put(gene)
+            print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Setting up gene queue")
+            for gene in genes:
+                inQueue.put(gene)
 
-        print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Starting workers")
-        for i in range(0, NUM_PROCS):
-            p = mp.Process(target = evaluateGenesWorker, args=(i, env, inQueue, outQueue))
-            processes.append(p)
-            p.start()
+            print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Starting workers")
+            for i in range(0, NUM_PROCS):
+                p = mp.Process(target = evaluateGenesWorker, args=(i, env, inQueue, outQueue))
+                processes.append(p)
+                p.start()
 
+            for p in processes:
+                p.join()
 
-        for p in processes:
-            p.join()
+            print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Collecting new genes")
+            pool.genePool = []
 
-        print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} Collecting new genes")
-        pool.genePool = []
+            for i in range(0, GENE_POOL_SIZE):
+                pool.genePool += [outQueue.get()]
 
-        for i in range(0, GENE_POOL_SIZE):
-            pool.genePool += [outQueue.get()]
-
-        #Old method: equal division over workers
-        '''
-        genesInPool = int(GENE_POOL_SIZE / NUM_PROCS)
-        processes = []
-        outQueue = mp.Queue()
-
-        for i in range(0, NUM_PROCS):
-            p = mp.Process(target = evaluateGenes, args=(genes, i*genesInPool, (i+1) * genesInPool, env, outQueue))
-            processes.append(p)
-            p.start()
-
-        pool.genePool = []
-
-        for p in processes:
-            p.join()
-            pool.genePool += outQueue.get()
-        '''
-        pool.evolve()
-        print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} finished evolving pool")
+            pool.evolveNew()
+            print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} finished evolving pool")
+        pool.endRun()
