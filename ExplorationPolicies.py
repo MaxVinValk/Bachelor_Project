@@ -63,9 +63,9 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
 			print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
 
-		#statC = StatCollector.getInstance()
-		#self.cc = statC.getClassCollector()
-		#self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
+		statC = StatCollector.getInstance()
+		self.cc = statC.getClassCollector()
+		self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
 
 	def updateEpsilon(self):
 
@@ -79,8 +79,8 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			self.epsilon = max(self.epsilon - self.decayRate, self.minEpsilon)
 
 	def endSimulationUpdate(self):
-		#statC = StatCollector.getInstance()
-		#self.cc.updateStatistic("epsilonOverTime", self.epsilon)
+		statC = StatCollector.getInstance()
+		self.cc.updateStatistic("epsilonOverTime", self.epsilon)
 
 		self.updateEpsilon()
 

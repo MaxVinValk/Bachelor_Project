@@ -66,29 +66,36 @@ class GenePool():
 
     #Note: There is an additional constraint: miniBatchSize >= minReplayMemorySize
     #TODO: Can't we remove the value type and use instanceof(numbers.Real) ?
-    GENES = {   "learningRate" : {"type" : "float", "minValue" : 0.0001, "maxValue" : 1},
+    GENES = {   "learningRate" : {"type" : "float", "minValue" : 0.000001, "maxValue" : 1},
                 "minReplayMemorySize" : {"type" : "int", "minValue" : 1, "maxValue" : 200},
                 "miniBatchSize" : {"type" : "int", "minValue" : 1, "maxValue" : 200},
                 "layers" : {"type" : "int", "minValue" : 1, "maxValue" : 16},
-                "nodesInLayer" : {"type" : "int", "minValue" : 1, "maxValue" : 32}
+                "nodesInLayer" : {"type" : "int", "minValue" : 1, "maxValue" : 32},
+                "startingEpsilon" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1},
+                "decayRate" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1}
             }
+
+    lastWrittenTo = None
 
     def createLogicModule(gene):
         #TODO: Encode expl. policy params ?
-        decay = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
+        #decay = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
 
-        explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = decay, minEpsilon = 0.01)
+        explPolicy = EpsilonGreedyPolicy(epsilon = gene["startingEpsilon"], decayRate = gene["decayRate"], minEpsilon = 0.01)
+
+        #explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = decay, minEpsilon = 0.01)
         return QLearningNeuralModule(explPolicy, 0, gene["learningRate"],
                                     gene["minReplayMemorySize"], gene["miniBatchSize"],
                                     gene["layers"], gene["nodesInLayer"])
 
-    def __init__(self, genePoolSize = 64, elitism = 4, copied = 8, mutateChance = 0.05):
+    def __init__(self, genePoolSize = 64, elitism = 4, copied = 8, mutateChance = 0.05, outputDir = "genepool"):
 
         self.GENE_POOL_SIZE = genePoolSize
         self.ELITISM = elitism
         self.COPIED = copied
         self.OFFSPRING = self.GENE_POOL_SIZE - self.COPIED - self.ELITISM
         self.MUTATE_CHANCE = mutateChance
+        self.outputDir = outputDir
 
         self.initRandom()
 
@@ -104,6 +111,11 @@ class GenePool():
     # reproduce using arithmic crossover
     def evolveNew(self):
         self.genePool.sort(reverse = True, key = itemgetter(0))
+
+        #Last stored was the intial generated genepool. Now we score it, too
+        if self.lastWrittenTo is not None:
+            with open(self.lastWrittenTo, "wb") as f:
+                pickle.dump(self.genePool, f)
 
         newGenes = []
 
@@ -151,6 +163,7 @@ class GenePool():
         totalScore = 0
         for gene in self.genePool:
             totalScore += gene[0]
+
 
         if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
             print(f"[OWN_OUT] Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
@@ -296,7 +309,7 @@ class GenePool():
     #To call at the beginning of a run
     #assumes that the current runidx has not been started yet
     def startRun(self):
-        os.mkdir(f"genepool/run_{self.runCtr}")
+        os.mkdir(f"{self.outputDir}/run_{self.runCtr}")
 
     def endRun(self):
         self.runCtr += 1
@@ -305,13 +318,13 @@ class GenePool():
     #deals with restarting the program if it has been interrupted
     def restart(self):
 
-        if not os.path.exists("genepool"):
+        if not os.path.exists(f"{self.outputDir}"):
             try:
-                os.mkdir("genepool")
+                os.mkdir(f"{self.outputDir}")
             except OSError as e:
                 print(f"{cm.WARNING} Failed to create directory for genepool data.{cm.NORMAL}")
 
-            with open("genepool/infoFile", "wb") as f:
+            with open(f"{self.outputDir}/infoFile", "wb") as f:
                 pickle.dump(self.currentGen, f)
                 pickle.dump(self.GENE_POOL_SIZE, f)
                 pickle.dump(self.ELITISM, f)
@@ -324,7 +337,7 @@ class GenePool():
         else:
             self.loadPool()
 
-            with open("genepool/infoFile", "rb") as f:
+            with open(f"{self.outputDir}/infoFile", "rb") as f:
                 self.currentGen = pickle.load(f)
                 self.GENE_POOL_SIZE = pickle.load(f)
                 self.ELITISM = pickle.load(f)
@@ -338,9 +351,10 @@ class GenePool():
             return True
 
     def savePool(self):
-        name = f"genepool/run_{self.runCtr}/genes_gen_{self.currentGen}_{datetime.now().strftime('%m_%d - %H_%M_%S')}"
+        name = f"{self.outputDir}/run_{self.runCtr}/genes_gen_{self.currentGen}_{datetime.now().strftime('%m_%d - %H_%M_%S')}"
+        self.lastWrittenTo = name
 
-        with open("genepool/infoFile", "wb") as f:
+        with open(f"{self.outputDir}/infoFile", "wb") as f:
             pickle.dump(self.currentGen, f)
             pickle.dump(self.GENE_POOL_SIZE, f)
             pickle.dump(self.ELITISM, f)
@@ -357,15 +371,15 @@ class GenePool():
         #Get latest folder:
         latestNo = 0
 
-        for file in os.listdir("genepool"):
-            if os.path.isfile(f"genepool/{file}"):
+        for file in os.listdir(f"{self.outputDir}"):
+            if os.path.isfile(f"{self.outputDir}/{file}"):
                 continue
             if "run_" in file:
                 no = int(file[4:])
                 if no > latestNo:
                     latestNo = no
 
-        runFolder = f"genepool/run_{latestNo}"
+        runFolder = f"{self.outputDir}/run_{latestNo}"
         self.runCtr = latestNo
 
         lastFile = None
@@ -388,3 +402,4 @@ class GenePool():
         if lastFile is not None:
             with open(f"{runFolder}/{lastFile}", "rb") as f:
                 self.genePool = pickle.load(f)
+            self.lastWrittenTo = f"{runFolder}/{lastFile}"

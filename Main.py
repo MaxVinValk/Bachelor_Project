@@ -61,16 +61,16 @@ explPolicy = None
 lm = None
 agent = None
 
-EPSILON_DECAY = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
+EPSILON_DECAY = 0.4519835#EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 25)
 MIN_EPSILON = 0.01
-START_EPSILON = 1
+START_EPSILON = 0.5159773
 DISCOUNT_FACTOR = 0
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.14304498
 
-MIN_REPLAY_MEMORY_SIZE = 157
-MINIBATCH_SIZE = 56
-LAYERS = 3
-NODES_IN_LAYER = 2
+MIN_REPLAY_MEMORY_SIZE = 97
+MINIBATCH_SIZE = 22
+LAYERS = 2
+NODES_IN_LAYER = 14
 
 statC.startSession()
 statC.addSessionData("random_seed", RANDOM_SEED)

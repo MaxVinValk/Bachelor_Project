@@ -1,12 +1,3 @@
-#
-#   Statistics:
-#       TODO:   Move features from StatCollector w.r.t. plotting and such,
-#               to its own class
-#
-#   allow getDecay to start at a non-1 value
-#
-#
-
 from Environment import Environment
 from Agent import Agent
 from ExplorationPolicies import EpsilonGreedyPolicy, GreedyPolicy
@@ -29,13 +20,43 @@ import os
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 #Number of repetitions of the genetic pool run
-NUM_REPS = 4
+NUM_REPS = 1
 
 #Number of simulated problems per run
 NUM_SIMULATIONS = 200
 #Number of (independent) genepool runs per program execution
 NUM_GENS = 2
-GENE_POOL_SIZE = 24
+
+#Can be adjusted with parameters
+GENE_POOL_SIZE = 64
+COPIED = 12
+MUTATION = 0.05
+ELITISM = 8
+OUTPUT_DIR = "genepool"
+
+
+#Load in command line arguments
+try:
+    options = getopt.getopt(sys.argv[1:], "", ["poolSize=", "copied=", "mutation=", "elitism=", "dir="])
+    for o, a in options[0]:
+        if o == "--poolSize":
+            GENE_POOL_SIZE = int(a)
+        elif o == "--copied":
+            COPIED = int(a)
+        elif o == "--mutation":
+            MUTATION = float(a)
+        elif o == "--elitism":
+            ELITISM = int(a)
+        elif o == "--dir":
+            OUTPUT_DIR = str(a)
+
+
+
+except getopt.GetoptError as err:
+    print(str(err))
+    exit(1)
+
+
 
 #Processes to be spawned. GENE_POOL_SIZE needs to be divisible by this if
 # evaluateGenes is used.
@@ -87,10 +108,9 @@ if __name__ == '__main__':
     statC.getSettings().disableLogging()
 
     #Setup code
-
     np.random.seed(RANDOM_SEED)
     env = Environment()
-    pool = GenePool(genePoolSize = GENE_POOL_SIZE)
+    pool = GenePool(genePoolSize = GENE_POOL_SIZE, elitism = ELITISM, copied = COPIED, mutateChance = MUTATION, outputDir = OUTPUT_DIR)
 
     hasRestarted = pool.restart()
 

@@ -22,12 +22,12 @@ class Agent():
 
 	def train(self, numSimulations):
 
-		#statC = StatCollector.getInstance()
-		#cc = statC.getClassCollector()
+		statC = StatCollector.getInstance()
+		cc = statC.getClassCollector()
 
-		#cc.addStatistic("rewardsOverTime", "Rewards received over time")
-		#cc.addStatistic("guessesOverTime", "Number of guesses over time")
-		#cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
+		cc.addStatistic("rewardsOverTime", "Rewards received over time")
+		cc.addStatistic("guessesOverTime", "Number of guesses over time")
+		cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
 		self.environment.setUseTrain(True)
 		runningAccuracy = 0
@@ -51,15 +51,15 @@ class Agent():
 
 			self.logicModule.endSimulationUpdate()
 
-			#cc.updateStatistic("rewardsOverTime", collectiveReward)
-			#cc.updateStatistic("guessesOverTime", guesses)
+			cc.updateStatistic("rewardsOverTime", collectiveReward)
+			cc.updateStatistic("guessesOverTime", guesses)
 
 			acc = 1 / guesses
-			#cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
 			runningAccuracy += acc / numSimulations
 
-		#statC.save()
+		statC.save()
 		return runningAccuracy
 
 	def getAction(self, state):
