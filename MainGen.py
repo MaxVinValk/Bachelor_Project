@@ -171,6 +171,6 @@ if __name__ == '__main__':
             for i in range(0, GENE_POOL_SIZE):
                 pool.genePool += [outQueue.get()]
 
-            pool.evolveNew()
+            pool.evolve()
             print(f"[OWN_OUT] {datetime.now().strftime('%m/%d - %H:%M:%S')} finished evolving pool")
         pool.endRun()

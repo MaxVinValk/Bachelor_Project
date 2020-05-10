@@ -109,7 +109,7 @@ class GenePool():
     # gaussian noise in mutation
     # only mutation for the copied parents
     # reproduce using arithmic crossover
-    def evolveNew(self):
+    def evolve(self):
         self.genePool.sort(reverse = True, key = itemgetter(0))
 
         #Last stored was the intial generated genepool. Now we score it, too
@@ -132,7 +132,7 @@ class GenePool():
 
         for i in range(0, self.COPIED):
             selectedGene = self.genePool[self.selectGene(self.genePool, totalScore)]
-            self.mutateGeneNew(selectedGene[1])
+            self.mutateGene(selectedGene[1])
             newGenes.append(selectedGene)
 
         for i in range(0, int(self.OFFSPRING/2)):
@@ -148,45 +148,6 @@ class GenePool():
 
         #ensure all values are valid
         for gene in newGenes:
-            self.enforceBounds(gene[1])
-
-        self.genePool = newGenes
-        self.currentGen += 1
-        self.savePool()
-
-    def evolve(self):
-        self.genePool.sort(reverse = True, key = itemgetter(0))
-
-        newGenes = []
-
-        #calculate total score:
-        totalScore = 0
-        for gene in self.genePool:
-            totalScore += gene[0]
-
-
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
-            print(f"[OWN_OUT] Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
-
-        for i in range(0, self.ELITISM):
-            newGenes.append(self.genePool[i])
-
-        for i in range(0, self.COPIED):
-            newGenes.append(self.genePool[self.selectGene(self.genePool, totalScore)])
-
-        for i in range(0, int(self.OFFSPRING/2)):
-            firstParent = self.selectGene(self.genePool, totalScore)
-            secondParent = self.selectGene(self.genePool, totalScore)
-
-            while firstParent == secondParent:
-                secondParent = self.selectGene(self.genePool, totalScore)
-
-            firstChild, secondChild = self.createOffspring(self.genePool[firstParent], self.genePool[secondParent])
-            newGenes.append(firstChild)
-            newGenes.append(secondChild)
-
-        for gene in newGenes:
-            self.mutateGene(gene[1])
             self.enforceBounds(gene[1])
 
         self.genePool = newGenes
@@ -229,7 +190,7 @@ class GenePool():
         #should not be reached but a failsafe
         return len(genePool) - 1
 
-    def mutateGeneNew(self, gene):
+    def mutateGene(self, gene):
         for key, value in gene.items():
             if np.random.uniform(0, 1) < self.MUTATE_CHANCE:
                 geneInfo = self.GENES[key]
@@ -242,33 +203,6 @@ class GenePool():
                 elif geneInfo["type"] == "int":
                     #select at random
                     self.setToRandomValue(gene, key, self.GENES[key])
-
-
-    def mutateGene(self, gene):
-
-        #key is the property name, value the numerical value
-        for key, value in gene.items():
-            if np.random.uniform(0, 1) < self.MUTATE_CHANCE:
-                if self.MUTATE_RANDOM:
-                    self.setToRandomValue(gene, key, value)
-                else:
-                    #obtain the information about the gene such as its datatype and
-                    geneInfo = self.GENES[key]
-
-                    if geneInfo["type"] == "float":
-                        mutateBy = np.random.uniform(0, (geneInfo["maxValue"] - geneInfo["minValue"]) / self.MUTATE_CHANGE)
-
-                    elif geneInfo["type"] == "int":
-                        mutateBy = np.random.randint(0, int((geneInfo["maxValue"] - geneInfo["minValue"]) / self.MUTATE_CHANGE))
-
-                    #To center the change so it can be negative
-                    mutateBy -= ((geneInfo["maxValue"] - geneInfo["minValue"]) / self.MUTATE_CHANGE) / 2
-
-                    if (geneInfo["type"] == "int"):
-                        mutateBy = int(mutateBy)
-
-                    #We update the new value and make certain it is in the correct range
-                    gene[key] = self.setInRange(gene[key] + mutateBy, geneInfo["minValue"], geneInfo["maxValue"])
 
     def enforceBounds(self, gene):
          #There is an additional constraint: miniBatchSize <= minReplayMemorySize
