@@ -164,6 +164,31 @@ def loadResults(rootFolder, numLoad):
     return resultingHeap
 
 
+#IN: a list of genes
+#OUT: For each feature a histogram representing that feature
+
+def getHists(genes, binSize = 0.05):
+    numSteps = int(1 / binSize)
+    hists = {'decayRate' : [0] * numSteps, 'layers' : [0] * 17, 'learningRate' : [0] * numSteps, 'minReplayMemorySize': [0] * 201,
+    'miniBatchSize' : [0] * 201, 'nodesInLayer' : [0] * 33, 'startingEpsilon' : [0] * numSteps}
+
+    for gene in genes:
+        for key, value in gene[1].items():
+            #Quick and dirty: floats from ints
+            index = 0
+            if key == 'startingEpsilon' or key == 'learningRate' or key == 'decayRate':
+                index = int(value / binSize)
+                #For the starting values exactly on the border
+                if (index == numSteps):
+                    index -= 1
+            else:
+                index = value
+            hists[key][index] += 1
+    return hists
+
+
+
+
 
 def performClustering(genes, numClusters):
     if len(genes) < numClusters:
