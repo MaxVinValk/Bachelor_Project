@@ -61,16 +61,16 @@ explPolicy = None
 lm = None
 agent = None
 
-EPSILON_DECAY = 0.4519835#EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 25)
+EPSILON_DECAY = 0.9663420261989969#EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
 MIN_EPSILON = 0.01
-START_EPSILON = 0.5159773
+START_EPSILON = 0.9768238402411479
 DISCOUNT_FACTOR = 0
-LEARNING_RATE = 0.14304498
+LEARNING_RATE = 0.9138424977829493
 
-MIN_REPLAY_MEMORY_SIZE = 97
-MINIBATCH_SIZE = 22
+MIN_REPLAY_MEMORY_SIZE = 42
+MINIBATCH_SIZE = 42
 LAYERS = 2
-NODES_IN_LAYER = 14
+NODES_IN_LAYER = 3
 
 statC.startSession()
 statC.addSessionData("random_seed", RANDOM_SEED)
@@ -79,7 +79,8 @@ statC.addSessionData("start_epsilon", START_EPSILON)
 statC.addSessionData("epsilon_decay", EPSILON_DECAY)
 statC.addSessionData("discount_factor", DISCOUNT_FACTOR)
 statC.addSessionData("learning_rate", LEARNING_RATE)
-statC.addSessionData("Model info", "2 x 32, min replay: 32, batch size: 16")
+statC.addSessionData("Model info", f"{LAYERS} x {NODES_IN_LAYER}, min replay:" +
+                     f"{MIN_REPLAY_MEMORY_SIZE}, batch size: {MINIBATCH_SIZE}")
 
 #The simulations themselves
 for i in range(0, NUM_REPETITIONS):

@@ -172,6 +172,8 @@ class Environment():
 
 		idx = self.COLORS[relevantObstacle[0]] + " " + self.TYPES[relevantObstacle[1]]
 
+		#print(f"Action to perform: {self.BESTACTIONS[idx]}, received: {action}")
+
 		if self.BESTACTIONS[idx] == action:
 			reward = self.SUCCESS_REWARD
 			done = True

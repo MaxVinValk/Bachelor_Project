@@ -37,7 +37,7 @@ OUTPUT_DIR = "genepool"
 
 #Load in command line arguments
 try:
-    options = getopt.getopt(sys.argv[1:], "", ["poolSize=", "copied=", "mutation=", "elitism=", "dir="])
+    options = getopt.getopt(sys.argv[1:], "", ["poolSize=", "copied=", "mutation=", "elitism=", "dir=", "numReps=", "numGens="])
     for o, a in options[0]:
         if o == "--poolSize":
             GENE_POOL_SIZE = int(a)
@@ -49,6 +49,10 @@ try:
             ELITISM = int(a)
         elif o == "--dir":
             OUTPUT_DIR = str(a)
+        elif o == "--numReps":
+            NUM_REPS = int(a)
+        elif o == "--numGens":
+            NUM_GENS = int(a)
 
 
 

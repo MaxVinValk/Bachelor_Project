@@ -22,15 +22,17 @@ class Agent():
 
 	def train(self, numSimulations):
 
-		statC = StatCollector.getInstance()
-		cc = statC.getClassCollector()
+		#statC = StatCollector.getInstance()
+		#cc = statC.getClassCollector()
 
-		cc.addStatistic("rewardsOverTime", "Rewards received over time")
-		cc.addStatistic("guessesOverTime", "Number of guesses over time")
-		cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
+		#cc.addStatistic("rewardsOverTime", "Rewards received over time")
+		#cc.addStatistic("guessesOverTime", "Number of guesses over time")
+		#cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
 
 		self.environment.setUseTrain(True)
-		runningAccuracy = 0
+		totalGuesses = 0
+		firstCorrect = 0
+
 		disableProgress = GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]
 
 		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation", disable = disableProgress):
@@ -40,27 +42,31 @@ class Agent():
 			collectiveReward = 0
 			guesses = 0
 
+
+
 			while not done:
 				state = self.environment.getState()
 				action = self.logicModule.getAction(state)
 				origState, resState, reward, done =  self.environment.performAction(action)
-
+				guesses += 1
 				self.logicModule.train(origState, resState, action, reward, done)
 				collectiveReward += reward
-				guesses += 1
 
 			self.logicModule.endSimulationUpdate()
 
-			cc.updateStatistic("rewardsOverTime", collectiveReward)
-			cc.updateStatistic("guessesOverTime", guesses)
+			#cc.updateStatistic("rewardsOverTime", collectiveReward)
+			#cc.updateStatistic("guessesOverTime", guesses)
 
 			acc = 1 / guesses
-			cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+			#cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
 
-			runningAccuracy += acc / numSimulations
+			totalGuesses += guesses
 
-		statC.save()
-		return runningAccuracy
+			if guesses == 1:
+				firstCorrect += 1
+
+		#statC.save()
+		return firstCorrect / numSimulations
 
 	def getAction(self, state):
 		return self.logicModule.getAction(state)

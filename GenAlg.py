@@ -5,7 +5,7 @@ import pickle
 
 
 from LogicModules import QLearningNeuralModule
-from ExplorationPolicies import EpsilonGreedyPolicy
+from ExplorationPolicies import EpsilonGreedyPolicy, BoltzmanExplorationPolicy
 from operator import itemgetter
 from datetime import datetime
 from RunSettings import GlobalSettings
@@ -65,25 +65,43 @@ class GenePool():
     SIGMA = 0.1
 
     #Note: There is an additional constraint: miniBatchSize >= minReplayMemorySize
-    #TODO: Can't we remove the value type and use instanceof(numbers.Real) ?
+
+    #   For exploration policy selection, the following is relevant:
+    #
+    #       ExporationPolicy: Decides what policy to use
+    #
+    #       startingExplValue: (previously called startingEpsilon)
+    #           In eps-greedy, determines starting epsilon
+    #           In boltzman, starting temperature/1000 (so to get starting temp, this val * 1000)
+    #
+    #       decayRate:
+    #           In eps-greedy + boltzman, determines the rate of decay
+    #
+
     GENES = {   "learningRate" : {"type" : "float", "minValue" : 0.000001, "maxValue" : 1},
                 "minReplayMemorySize" : {"type" : "int", "minValue" : 1, "maxValue" : 200},
                 "miniBatchSize" : {"type" : "int", "minValue" : 1, "maxValue" : 200},
                 "layers" : {"type" : "int", "minValue" : 1, "maxValue" : 16},
                 "nodesInLayer" : {"type" : "int", "minValue" : 1, "maxValue" : 32},
-                "startingEpsilon" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1},
-                "decayRate" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1}
+                "startingExplValue" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1},
+                "decayRate" : {"type" : "float", "minValue" : 0.01, "maxValue" : 1},
+                "explorationPolicy": {"type" : "select", "values" : ["epsilon", "boltzman"]}
             }
+
 
     lastWrittenTo = None
 
     def createLogicModule(gene):
-        #TODO: Encode expl. policy params ?
-        #decay = EpsilonGreedyPolicy.getDecay(targetEpsilon = 0.01, numEpisodes = 100)
+        #CHANGE THIS!
 
-        explPolicy = EpsilonGreedyPolicy(epsilon = gene["startingEpsilon"], decayRate = gene["decayRate"], minEpsilon = 0.01)
+        explPolicy = None
 
-        #explPolicy = EpsilonGreedyPolicy(epsilon = 1, decayRate = decay, minEpsilon = 0.01)
+        if gene["explorationPolicy"] == "epsilon":
+            explPolicy = EpsilonGreedyPolicy(epsilon = gene["startingExplValue"], decayRate = gene["decayRate"], minEpsilon = 0.01)
+        elif gene["explorationPolicy"] == "boltzman":
+            explPolicy = BoltzmanExplorationPolicy(startingTemperature = gene["startingExplValue"] * 1000,
+                                                    temperatureDecay = gene["decayRate"], minTemperature = 10)
+
         return QLearningNeuralModule(explPolicy, 0, gene["learningRate"],
                                     gene["minReplayMemorySize"], gene["miniBatchSize"],
                                     gene["layers"], gene["nodesInLayer"])
@@ -200,7 +218,7 @@ class GenePool():
                     change = np.random.normal() * self.SIGMA
                     gene[key] = self.setInRange(gene[key] + change, geneInfo["minValue"], geneInfo["maxValue"])
 
-                elif geneInfo["type"] == "int":
+                elif geneInfo["type"] == "int" or geneInfo["type"] == "select":
                     #select at random
                     self.setToRandomValue(gene, key, self.GENES[key])
 
@@ -233,6 +251,8 @@ class GenePool():
             newValue = np.random.uniform(attributes["minValue"], attributes["maxValue"])
         elif attributes["type"] == "int":
             newValue =  np.random.randint(attributes["minValue"], attributes["maxValue"])
+        elif attributes["type"] == "select":
+            newValue = np.random.choice(attributes["values"])
 
         if (name == "miniBatchSize"):
             while (newValue > gene["minReplayMemorySize"]):

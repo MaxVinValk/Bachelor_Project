@@ -212,8 +212,9 @@ class QLearningNeuralModule(LogicModule):
 
 		currentExperience = (self._normalizeState(origState), self._normalizeState(resState), action, reward, done)
 
-		#Add memory to replayMemory
-		self.replayMemory.append(currentExperience)
+		#if (actionsTaken[action] == 0):
+			#Add memory to replayMemory
+		#	self.replayMemory.append(currentExperience)
 
 		#Check if we have enough memories
 		if len(self.replayMemory) < self.MIN_REPLAY_MEMORY_SIZE:
@@ -262,7 +263,7 @@ class QLearningNeuralModule(LogicModule):
 			y.append(currentQ)
 
 		# Fit on all samples as one batch, log only on terminal state
-		self.model.fit(np.array(X), np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if done else None)
+		self.model.fit(np.array(X), np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=None)
 
 		# updating to determine if we want to update target_model yet
 		'''

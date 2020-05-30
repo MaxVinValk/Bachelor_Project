@@ -34,6 +34,45 @@ class GreedyPolicy(ExplorationPolicy):
 		pass
 
 
+class BoltzmanExplorationPolicy(ExplorationPolicy):
+
+	VALID_DECAY_MODES = ["multiplication", "linear"]
+
+	def __init__(self, startingTemperature, temperatureDecay, minTemperature, decayMode = "multiplication"):
+
+		self.temperature = startingTemperature
+		self.temperatureDecay = temperatureDecay
+		self.minTemperature = minTemperature
+
+		if (decayMode not in self.VALID_DECAY_MODES):
+			print(f"{cm.WARNING} Provided invalid decay mode {decayMode}. Defaulting to {self.VALID_DECAY_MODES[0]} instead.")
+			decayMode = self.VALID_DECAY_MODES[0]
+		self.decayMode = decayMode
+
+
+	def getAction(self, qValues):
+		proportion = [np.power(np.e, i/self.temperature) for i in qValues]
+		sum = np.sum(proportion)
+		proportion = sorted([i/sum for i in proportion], reverse = True)
+
+		selected = np.random.uniform(0, 1)
+
+		for i in range(0, len(proportion)):
+			selected -= proportion[i]
+
+			if (selected <= 0):
+				return i
+
+	def endSimulationUpdate(self):
+		if (self.decayMode is "multiplication"):
+			self.epsilon = max(self.temperature * self.temperatureDecay, self.minTemperature)
+
+		elif (self.decayMode is "linear"):
+			self.epsilon = max(self.temperature - self.temperatureDecay, self.minTemperature)
+
+
+
+
 class EpsilonGreedyPolicy(ExplorationPolicy):
 
 	#this function allows us to obtain an epsilon decay, which results in an epsilon of targetEpsilon at episode numEpisodes
@@ -63,9 +102,9 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
 			print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
 
-		statC = StatCollector.getInstance()
-		self.cc = statC.getClassCollector()
-		self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
+		#statC = StatCollector.getInstance()
+		#self.cc = statC.getClassCollector()
+		#self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
 
 	def updateEpsilon(self):
 
@@ -79,8 +118,8 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			self.epsilon = max(self.epsilon - self.decayRate, self.minEpsilon)
 
 	def endSimulationUpdate(self):
-		statC = StatCollector.getInstance()
-		self.cc.updateStatistic("epsilonOverTime", self.epsilon)
+		#statC = StatCollector.getInstance()
+		#self.cc.updateStatistic("epsilonOverTime", self.epsilon)
 
 		self.updateEpsilon()
 
