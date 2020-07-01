@@ -1,0 +1,13 @@
+numSimulations 		200
+numRepetitions 		250
+lm 					nn
+explPolicy 			boltzman
+explStart 			570.3737519197195
+explDecay 			0.7273431745645351
+explMin 			10
+learningRate 		0.6415113996743997
+minReplay 			111
+minibatchSize 		8
+layers 				8
+neuronsPerLayer 	29
+discountFactor 		0

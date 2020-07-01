@@ -9,10 +9,6 @@ from copy import deepcopy
 
 from ConsoleMessages import ConsoleMessages as cm
 
-#TODO: Move loading to settings!
-#TODO: Move other components to settings, too
-
-
 class StatSettings():
 
     outputData = True
@@ -32,12 +28,11 @@ class StatSettings():
 
     def disableLogging(self):
         self.logging = False
-
+        self.outputData = False
 
 
 class ClassCollector():
 
-    #TODO: Move to settings
     MAX_NUM_TO_FILE = 10_000
 
     settings = None
@@ -155,7 +150,7 @@ class ClassCollector():
                 if (len(dataOwn) != len(dataOther)):
                     print(f"{cm.INFO}attempted sum of two class collectors who do not hold same" +
                     f" amount of values")
-                    print(f"On: {key}, len self: {len(dataOwn)}, len other: {len(dataOther)}") 
+                    print(f"On: {key}, len self: {len(dataOwn)}, len other: {len(dataOther)}")
 
                     print(f"{cm.NORMAL}")
                 else:
@@ -209,7 +204,6 @@ class ClassCollector():
                     print(f"{cm.INFO}Could not find data for statistic {stat} in class" +
                     f"{self.owner}{cm.NORMAL}")
 
-
         plotCtr = 1
 
         for title, data in avgData.items():
@@ -228,12 +222,10 @@ class ClassCollector():
                 plots += 1
 
 
-
         if (plotCtr == 1):
             return plots
         else:
             return plots + 1
-
 
     def getStatistic(self, statisticName):
         if statisticName in self.statistics:
@@ -241,7 +233,13 @@ class ClassCollector():
         else:
             print(f"{cm.ERROR} Could not find requested statistic {statisticName} in class {self.owner}.{cm.NORMAL}")
 
+class DummyClassCollector():
 
+    def addStatistic(self, name, title):
+        pass
+
+    def updateStatistic(self, name, value):
+        pass
 
 class RunCollector():
 
@@ -338,11 +336,9 @@ class StatCollector():
     settings = StatSettings()
     sessionData = {}
 
-
-    #move these to statSettings
     date = datetime.now().strftime('%m-%d_%H-%M')
-    #dataRoot should be constant> Or changeable with a function
-    dataRoot = "/home/maxvalk/Documents/Uni/Scriptie/data_out"
+
+    dataRoot = ""
     saveIn = dataRoot + "/" + date
 
     outputData = True
@@ -364,6 +360,7 @@ class StatCollector():
 
     def setDataRoot(self, dataRoot):
         self.dataRoot = dataRoot
+        self.saveIn = self.dataRoot + "/" + self.date
 
     def startSession(self):
 
@@ -415,6 +412,9 @@ class StatCollector():
         self.runs.append(RunCollector(self.currentRun, f"{self.saveIn}/rawData", self.settings))
 
     def save(self):
+        if (self.settings.outputData == False):
+            return
+
         self.runs[self.currentRun].save()
 
         if (len(self.sessionData)):
@@ -425,14 +425,22 @@ class StatCollector():
 
 
     def getClassCollector(self):
-
-        return self.runs[self.currentRun].getClassCollector()
+        if (self.settings.logging == False):
+            return DummyClassCollector()
+        else:
+            return self.runs[self.currentRun].getClassCollector()
 
     def getStatistic(self, run, className, statisticName):
         return run.getStatistic(className, statisticName)
 
     def getStatisticLatest(self, className, statisticName):
         return self.runs[self.currentRun].getStatistic(className, statisticName)
+
+    def collectStatistic(self, className, statisticName):
+        res = []
+        for run in self.runs:
+            res.append(run.getStatistic(className, statisticName)['data'])
+        return res
 
 
     def load(self, dirName):
@@ -560,8 +568,6 @@ class StatCollector():
     def _plotRun(self, run, averageOver, shape, plotAll, *toPlot):
         run.plot(averageOver, shape, plotAll, *toPlot)
 
-    #TODO make it so that models save in this folder by having the logicModule
-    #use this function to get the right directory
     def getCurrentSaveFolder(self):
         return self.saveIn
 

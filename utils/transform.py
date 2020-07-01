@@ -61,6 +61,12 @@ def averageRuns(runs):
 			avg[i] += run[i]
 
 	for i in range(0, len(avg)):
-		avg /= runLength
+		avg[i] /= len(runs)
 
 	return avg
+
+def getSpecificScenario(runs, encounter):
+	res = []
+	for run in runs:
+		res.append(run[encounter])
+	return res

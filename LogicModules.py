@@ -1,3 +1,6 @@
+# The implementation of the logic modules was based on code provided by 
+# Harrison Kinsley of http://www.pythonprogramming.net
+
 import numpy as np
 import random
 import time
@@ -13,6 +16,8 @@ from keras.optimizers import Adam
 from ModTensorBoard import ModifiedTensorBoard
 
 from collections import deque
+
+# template for what is needed in a logic module
 
 class LogicModule():
 
@@ -54,10 +59,6 @@ class QLearningTabModule(LogicModule):
 		self.LEARNING_RATE = learningRate
 		self.tableInFile = tableInFile
 
-		if (GlobalSettings.printMode == GlobalSettings.printMode[0]):
-			print(f"{cm.NORMAL}Initialized Tabular Q-Learning with discount Factor: {discountFactor} and learning Rate: {learningRate}")
-
-
 		super(QLearningTabModule, self).__init__(explorationPolicy)
 
 	def setupModule(self, stateDims, actionSize):
@@ -65,7 +66,6 @@ class QLearningTabModule(LogicModule):
 		self.actionSize = actionSize;
 
 		if (self.tableInFile == None):
-			print(f"{cm.NORMAL}Setting up Q-table of size:{stateDims + [actionSize]}")
 			self.qTable = np.random.uniform(low=-2, high = 0, size = stateDims + [actionSize])
 		else:
 			print(f"Loading table: {self.tableInFile}")
@@ -98,15 +98,11 @@ class QLearningTabModule(LogicModule):
 
 
 
-
-
-
 class QLearningNeuralModule(LogicModule):
 
 	REPLAY_MEMORY_SIZE = 50_000
 	MIN_REPLAY_MEMORY_SIZE = 32
 	MINIBATCH_SIZE = 16
-	UPDATE_TARGET_EVERY = 1 #irrelevant
 
 	ONE_HOT_ENCODING = True
 
@@ -139,8 +135,6 @@ class QLearningNeuralModule(LogicModule):
 		self.stateDims = np.array(stateDims)
 
 		self.model = self._createModel(stateDims, actionSize)
-		#self.targetModel = self._createModel(stateDims, actionSize)
-		#self.targetModel.set_weights(self.model.get_weights())
 
 		self.replayMemory = deque(maxlen=self.REPLAY_MEMORY_SIZE)
 		self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/{int(time.time())}")
@@ -155,11 +149,6 @@ class QLearningNeuralModule(LogicModule):
 		else:
 			inSize = len(stateDims)
 
-		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
-			print(f"{cm.INFO}Creating a CNN with input size {inSize}{cm.NORMAL}")
-			print(f"{cm.INFO}and output size {actionSize} {cm.NORMAL}")
-			print(f"{cm.INFO}with {self.LAYERS} layers of {self.NODES_IN_LAYER} nodes{cm.NORMAL}")
-
 		model = Sequential()
 
 		model.add(Dense(self.NODES_IN_LAYER, input_dim = inSize))
@@ -168,12 +157,6 @@ class QLearningNeuralModule(LogicModule):
 		for i in range(0, self.LAYERS - 1):
 			model.add(Dense(self.NODES_IN_LAYER))
 			model.add(Activation("elu"))
-
-		#model.add(Dense(32, input_dim = inSize))
-		#model.add(Activation("elu"))
-
-		#model.add(Dense(32))
-		#model.add(Activation("elu"))
 
 
 		model.add(Dense(actionSize))
@@ -212,9 +195,7 @@ class QLearningNeuralModule(LogicModule):
 
 		currentExperience = (self._normalizeState(origState), self._normalizeState(resState), action, reward, done)
 
-		#if (actionsTaken[action] == 0):
-			#Add memory to replayMemory
-		#	self.replayMemory.append(currentExperience)
+		self.replayMemory.append(currentExperience)
 
 		#Check if we have enough memories
 		if len(self.replayMemory) < self.MIN_REPLAY_MEMORY_SIZE:
@@ -233,28 +214,26 @@ class QLearningNeuralModule(LogicModule):
 		currentStates = np.array([transition[0] for transition in miniBatch])
 		currentQScores = self.model.predict(currentStates)
 
-		#Can be left out as we do not care for a sequence of actions and we have deterministic rewards
-
-		#TEMP: NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
-		#resStates = np.array([transition[1] for transition in miniBatch])
-		#futureQScores = self.targetModel.predict(resStates)
+		#NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
+		if (self.DISCOUNT_FACTOR != 0):
+			resStates = np.array([transition[1] for transition in miniBatch])
+			futureQScores = self.targetModel.predict(resStates)
 
 		X = []
 		y = []
 
 		for index, (batchOrigState, batchResState, batchAction, batchReward, batchDone) in enumerate(miniBatch):
 
-			#TEMP: NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
+			#NO NEED FOR THIS WITH DISCOUNT_FACTOR OF 0
 
-			'''
-			if not batchDone:
-				maxFutureQ = np.max(futureQScores[index])
-				newQ = batchReward + self.DISCOUNT_FACTOR * maxFutureQ
+			if (self.DISCOUNT_FACTOR != 0):
+				if not batchDone:
+					maxFutureQ = np.max(futureQScores[index])
+					newQ = batchReward + self.DISCOUNT_FACTOR * maxFutureQ
+				else:
+					newQ = batchReward
 			else:
 				newQ = batchReward
-			'''
-
-			newQ = batchReward
 
 			currentQ = currentQScores[index]
 			currentQ[batchAction] = newQ
@@ -264,16 +243,6 @@ class QLearningNeuralModule(LogicModule):
 
 		# Fit on all samples as one batch, log only on terminal state
 		self.model.fit(np.array(X), np.array(y), batch_size=self.MINIBATCH_SIZE, verbose=0, shuffle=False, callbacks=None)
-
-		# updating to determine if we want to update target_model yet
-		'''
-		if done:
-			self.targetUpdateCounter += 1
-
-			if self.targetUpdateCounter > self.UPDATE_TARGET_EVERY:
-				self.targetModel.set_weights(self.model.get_weights())
-				self.targetUpdateCounter = 0
-		'''
 
 
 	def endSimulationUpdate(self):

@@ -1,6 +1,7 @@
 import pickle
 import os
 import multiprocessing as mp
+import time
 
 class Cluster():
 
@@ -18,7 +19,8 @@ class Cluster():
     def distance(self, gene):
         dist = 0
         for key, value in self.ownValue.items():
-            dist += abs(value - gene[key])
+            if not key == 'explorationPolicy':
+                dist += abs(value - gene[key])
 
         return dist
 
@@ -33,13 +35,15 @@ class Cluster():
 
         for i in range(1, len(self.nearestGenes)):
             for key, value in self.nearestGenes[i].items():
-                newValue[key] += value
+                if not key == 'explorationPolicy':
+                    newValue[key] += value
 
         change = 0
 
         for key, value in newValue.items():
-            newValue[key] /= len(self.nearestGenes)
-            change += abs(newValue[key] - oldValue[key])
+            if not key == 'explorationPolicy':
+                newValue[key] /= len(self.nearestGenes)
+                change += abs(newValue[key] - oldValue[key])
 
         self.ownValue = newValue
 
@@ -58,8 +62,9 @@ class Cluster():
         #Calculate summed squared distance
         for gene in self.nearestGenes:
             for key, value in gene.items():
-                dist = abs(self.ownValue[key] - gene[key])
-                wcss += dist * dist
+                if not key == 'explorationPolicy':
+                    dist = abs(self.ownValue[key] - gene[key])
+                    wcss += dist * dist
 
 
         #And average it
@@ -161,7 +166,14 @@ def loadResults(rootFolder, numLoad):
 
                 for gene in genes:
                     resultingHeap.process(gene[0], gene[1])
-    return resultingHeap
+    return resultingHeap.heap[1:]
+
+def filterOutGenes(genes, toFilterOut):
+
+    for i in range(0, len(genes)):
+        for gene in toFilterOut:
+            if gene in genes[i][1]:
+                del genes[i][1][gene]
 
 
 #IN: a list of genes
@@ -186,6 +198,22 @@ def getHists(genes, binSize = 0.05):
             hists[key][index] += 1
     return hists
 
+def histFloat(genes, key, bins=0.05):
+    hist = [0] * int(1/bins)
+    for gene in genes:
+        val = gene[1][key]
+        for i in range(0, len(hist)):
+            if (val >= bins*i and val < bins*(i+1)):
+                hist[i] += 1
+                break
+    return hist
+
+def histInt(genes, key, maxVal):
+    hist = [0] * maxVal
+    for i in range(0, len(genes)):
+        val = genes[i][1][key]
+        hist[val] += 1
+    return hist
 
 
 
@@ -256,15 +284,15 @@ def clusteringWorker(genes, inQueue, outArray):
         outArray[numClusters] = wcss
 
 
-def findK(genes, numWorkers):
+def findK(genes, numWorkers, numEls):
     inQueue = mp.Queue()
-    outArray = mp.Array('f', 4401, lock=False)
-
+    outArray = mp.Array('f', numEls + 1, lock=False)
+    time.sleep(0.1)
     wcssFile = "kmeans_wcss"
-
     #To make it feel like it goes faster I put it in reverse :)
-    for i in range(4400, 0, -1):
+    for i in range(numEls, 0, -1):
         inQueue.put(i)
+        time.sleep(0.001)
 
     processes = []
 

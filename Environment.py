@@ -1,9 +1,7 @@
 import numpy as np
 from RunSettings import GlobalSettings
-
 from ConsoleMessages import ConsoleMessages as cm
 
-#TODO: Read these parameters from a configuration file
 
 class Environment():
 
@@ -13,14 +11,7 @@ class Environment():
 	ACTIONS = [ ["continue", 2], ["push", 5], ["ask", 4], ["alt", 10] ]
 
 	#Here we store for each combination of colors + types the action that resolves the situation
-	#'''
-	BESTACTIONS = { "red ball"   : 1 , "red box"   : 3, "red person"   : 2,
-					"green ball" : 1 , "green box" : 3, "green person" : 2,
-					"blue ball" : 1 , "blue box" : 3, "blue person" : 3,
-					"yellow ball" : 1 , "yellow box" : 3, "yellow person" : 2,
-					"none none" : 0
-	}
-	#'''
+	BESTACTIONS = {}
 
 	NO_FIELDS = 6
 
@@ -79,8 +70,7 @@ class Environment():
 		self.BESTACTIONS["none none"] = np.random.randint(len(self.ACTIONS))
 
 
-	#TODO: Perhaps move to the agent? Allow a function for generating next state in env,
-	#and let the agent do the training/evaluation
+	#Allows an agent to be tested against all possible scenarios
 	def testAgainstAll(self, agent):
 
 		currentState = [0, 0] * self.NO_FIELDS
@@ -127,7 +117,7 @@ class Environment():
 			if currentField >= self.NO_FIELDS:
 				break
 
-		if (GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]):
+		if (GlobalSettings.printMode == GlobalSettings.PRINT_NORMAL):
 			print(f"accuracy: {score/guesses}")
 
 

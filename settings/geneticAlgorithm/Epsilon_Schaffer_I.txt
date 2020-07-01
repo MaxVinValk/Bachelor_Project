@@ -1,0 +1,9 @@
+poolSize 			24
+copied				6
+mutation			0.01
+elitism				0
+limitExplPolicy		epsilon
+numReps				25
+numGens				100
+numSims				200
+numEvals			10_000

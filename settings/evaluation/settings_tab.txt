@@ -1,0 +1,6 @@
+numSimulations 		200
+numRepetitions 		1000
+lm 					tab
+learningRate 		1
+discountFactor 		0
+randomSeed			1

@@ -11,44 +11,13 @@ from datetime import datetime
 from RunSettings import GlobalSettings
 from ConsoleMessages import ConsoleMessages as cm
 
-'''
-
-    USAGE in a main:
-        create GenePool
-
-    for however many simulation loops:
-        get the genePool
-
-        for each gene in the genePool:
-            perform 200 simulations
-            score performance by running a number of simulations
-            store performance with the genepool
-
-            evolve the genepool
-
-    output the results to a file
-
-
-
-
-
-
-    TODO: Range is inclusive in SetToRange but exclusive in the random
-    functions.
-
-    Use np.nextafter(x, y) to fix this, where x is the value you want the next
-    after one of and y indicates the direction
-
-'''
-
-
-
 class GenePool():
 
     genePool = []
     currentGen = 0
 
-    #To keep track of which run this is, for use in repeated runs
+    # To keep track of which run this is, for use in repeated runs in case of
+    # an interruption during the simulation
     runCtr = 0
 
     GENE_POOL_SIZE = 64
@@ -64,7 +33,7 @@ class GenePool():
     #Sigma is used to scale mutation of continuous variables
     SIGMA = 0.1
 
-    #Note: There is an additional constraint: miniBatchSize >= minReplayMemorySize
+    # Note: There is an additional constraint: miniBatchSize >= minReplayMemorySize
 
     #   For exploration policy selection, the following is relevant:
     #
@@ -88,11 +57,13 @@ class GenePool():
                 "explorationPolicy": {"type" : "select", "values" : ["epsilon", "boltzman"]}
             }
 
-
+    # Used for output reasons
     lastWrittenTo = None
 
+    # This method decodes a gene and turns it into a logic module instance
+
+    @staticmethod
     def createLogicModule(gene):
-        #CHANGE THIS!
 
         explPolicy = None
 
@@ -106,7 +77,12 @@ class GenePool():
                                     gene["minReplayMemorySize"], gene["miniBatchSize"],
                                     gene["layers"], gene["nodesInLayer"])
 
-    def __init__(self, genePoolSize = 64, elitism = 4, copied = 8, mutateChance = 0.05, outputDir = "genepool"):
+    def __init__(self, genePoolSize = 64, elitism = 4, copied = 8, mutateChance = 0.05, limitExplTo = None, outputDir = "genepool"):
+
+        if (limitExplTo == "epsilon"):
+            self.GENES["explorationPolicy"]["values"] = ["epsilon"]
+        elif (limitExplTo == "boltzman"):
+            self.GENES["explorationPolicy"]["values"] = ["boltzman"]
 
         self.GENE_POOL_SIZE = genePoolSize
         self.ELITISM = elitism
@@ -117,20 +93,19 @@ class GenePool():
 
         self.initRandom()
 
+    # Fills the gene pool with random genes
+
     def initRandom(self):
         self.genePool = []
         for i in range(0, self.GENE_POOL_SIZE):
             self.genePool.append([0, self.randomGene()])
 
 
-    #employing changes:
-    # gaussian noise in mutation
-    # only mutation for the copied parents
-    # reproduce using arithmic crossover
+    # Takes the current genes with fitness and creates the next generation
     def evolve(self):
         self.genePool.sort(reverse = True, key = itemgetter(0))
 
-        #Last stored was the intial generated genepool. Now we score it, too
+        #Last stored was the intial generated genepool
         if self.lastWrittenTo is not None:
             with open(self.lastWrittenTo, "wb") as f:
                 pickle.dump(self.genePool, f)
@@ -142,8 +117,9 @@ class GenePool():
         for gene in self.genePool:
             totalScore += gene[0]
 
-        if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
+        if GlobalSettings.printMode == GlobalSettings.PRINT_PEREGRINE:
             print(f"[OWN_OUT] Generation info: best {self.genePool[0][0]}, sum: {totalScore}")
+
 
         for i in range(0, self.ELITISM):
             newGenes.append(self.genePool[i])
@@ -172,6 +148,7 @@ class GenePool():
         self.currentGen += 1
         self.savePool()
 
+    #Takes 2 parents, creates 2 children
     def createOffspring(self, firstParent, secondParent):
         firstChild = [0, {}]
         secondChild = [0, {}]
@@ -194,7 +171,7 @@ class GenePool():
 
         return firstChild, secondChild
 
-
+    #Select gene from a genepool using roulette wheel selection
     def selectGene(self, genePool, sum):
 
         total = np.random.uniform(0, sum)
@@ -208,6 +185,7 @@ class GenePool():
         #should not be reached but a failsafe
         return len(genePool) - 1
 
+    #Applies mutation to the genes passed in, based on the chance to mutate each
     def mutateGene(self, gene):
         for key, value in gene.items():
             if np.random.uniform(0, 1) < self.MUTATE_CHANCE:
@@ -222,14 +200,13 @@ class GenePool():
                     #select at random
                     self.setToRandomValue(gene, key, self.GENES[key])
 
+    # Ensures that all values specified are valid w.r.t. additional constraints
     def enforceBounds(self, gene):
-         #There is an additional constraint: miniBatchSize <= minReplayMemorySize
-         for key, value in gene.items():
-             if key == "miniBatchSize":
-                 if (value > gene["minReplayMemorySize"]):
-                     gene[key] = gene["minReplayMemorySize"]
+         #constraint: miniBatchSize <= minReplayMemorySize
+         if (gene["miniBatchSize"] > gene["minReplayMemorySize"]):
+             gene["miniBatchSize"] = gene["minReplayMemorySize"]
 
-
+    # returns the value passed in bounded by the min and max
     def setInRange(self, value, min, max):
         if (value < min):
             return min
@@ -237,6 +214,7 @@ class GenePool():
             return max
         return value
 
+    # Generates a random gene
     def randomGene(self):
         gene = {}
 
@@ -245,7 +223,7 @@ class GenePool():
 
         return gene
 
-    #Works only if values are being set front to back, if keys are sorted
+    # Works only if values are being set front to back, if keys are sorted
     def setToRandomValue(self, gene, name, attributes):
         if attributes["type"] == "float":
             newValue = np.random.uniform(attributes["minValue"], attributes["maxValue"])
@@ -286,7 +264,6 @@ class GenePool():
                 pickle.dump(self.OFFSPRING, f)
                 pickle.dump(self.MUTATE_CHANCE, f)
 
-            #self.savePool()
             return False
         else:
             self.loadPool()
@@ -299,7 +276,7 @@ class GenePool():
                 self.OFFSPRING = pickle.load(f)
                 self.MUTATE_CHANCE = pickle.load(f)
 
-            if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]:
+            if GlobalSettings.printMode == GlobalSettings.PRINT_PEREGRINE:
                 print("[OWN_OUT] ####Restarting from file")
 
             return True

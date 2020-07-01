@@ -1,0 +1,13 @@
+numSimulations 		200
+numRepetitions 		250
+lm 					nn
+explPolicy 			epsilon
+explStart 			0.9768238402411479
+explDecay 			0.9663420261989969
+explMin 			0.01
+learningRate 		0.9138424977829493
+minReplay 			42
+minibatchSize 		42
+layers 				2
+neuronsPerLayer 	3
+discountFactor 		0

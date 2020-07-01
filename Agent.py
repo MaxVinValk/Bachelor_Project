@@ -7,11 +7,10 @@ from ConsoleMessages import ConsoleMessages as cm
 from ExplorationPolicies import GreedyPolicy
 from RunSettings import GlobalSettings
 
-SAVE_IN = "/media/max/88B5-59E2/data"
-MODEL_LOCATION = SAVE_IN + "/" + "qTable"
-DATA_LOCATION = SAVE_IN + "/" + "rawData"
-
 class Agent():
+
+	# To initialize an agent, it needs to be given an environment in which
+	# it operates and a logic module, which decides how it takes actions in the environment
 	def __init__(self, environment, logicModule):
 		self.environment = environment
 		self.logicModule = logicModule
@@ -20,29 +19,28 @@ class Agent():
 
 		logicModule.setupModule(stateDims, actionSize)
 
+	# Performs a training for a set number of simulations
 	def train(self, numSimulations):
 
-		#statC = StatCollector.getInstance()
-		#cc = statC.getClassCollector()
+		statC = StatCollector.getInstance()
+		cc = statC.getClassCollector()
 
-		#cc.addStatistic("rewardsOverTime", "Rewards received over time")
-		#cc.addStatistic("guessesOverTime", "Number of guesses over time")
-		#cc.addStatistic("guessesAccuracyOverTime", "Accuracy of guesses over time")
+		cc.addStatistic("guessesOverTime", "Number of guesses over time");
 
+		# Toggles between the pre-generated training set of states, and the evaluation
+		# set of states
 		self.environment.setUseTrain(True)
 		totalGuesses = 0
 		firstCorrect = 0
 
-		disableProgress = GlobalSettings.printMode == GlobalSettings.PRINT_MODES[1]
+		#Ensuring a progress bar is only shown when running normally
+		disableProgress = GlobalSettings.printMode != GlobalSettings.PRINT_NORMAL
 
 		for episode in tqdm(range(1, numSimulations+1), ascii=True, unit="simulation", disable = disableProgress):
 			self.environment.reset()
 			done = False
 
-			collectiveReward = 0
 			guesses = 0
-
-
 
 			while not done:
 				state = self.environment.getState()
@@ -50,37 +48,33 @@ class Agent():
 				origState, resState, reward, done =  self.environment.performAction(action)
 				guesses += 1
 				self.logicModule.train(origState, resState, action, reward, done)
-				collectiveReward += reward
 
 			self.logicModule.endSimulationUpdate()
 
-			#cc.updateStatistic("rewardsOverTime", collectiveReward)
-			#cc.updateStatistic("guessesOverTime", guesses)
-
-			acc = 1 / guesses
-			#cc.updateStatistic("guessesAccuracyOverTime", 1 / guesses)
+			cc.updateStatistic("guessesOverTime", guesses)
 
 			totalGuesses += guesses
 
 			if guesses == 1:
 				firstCorrect += 1
 
-		#statC.save()
+		statC.save()
 		return firstCorrect / numSimulations
 
 	def getAction(self, state):
 		return self.logicModule.getAction(state)
 
 	def evaluate(self, numberOfRuns):
+		# Swap to the evaluation state set.
 		self.environment.setUseTrain(False)
-		#first we swap out our exploration policy in the logic module to rate current performance
-		#of the learned behaviour
+		# first we swap out our exploration policy in the logic module to rate current performance
+		# of the learned behaviour, without the exploration policy interfering
 		originalExplorationPolicy = self.logicModule.getExplorationPolicy()
 		self.logicModule.setExplorationPolicy(GreedyPolicy())
 
 		score = 0
 
-		#Generate numberOfRuns random simulations
+		#The reset env will move to the next untried evaluation/validation state
 		for i in range(0, numberOfRuns):
 			self.environment.reset()
 			state = self.environment.getState()

@@ -1,0 +1,9 @@
+poolSize 			64
+copied				24
+mutation			0.001
+elitism				0
+limitExplPolicy		boltzman
+numReps				25
+numGens				100
+numSims				200
+numEvals			10_000

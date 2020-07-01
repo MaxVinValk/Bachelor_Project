@@ -3,8 +3,12 @@ import numpy as np
 from ConsoleMessages import ConsoleMessages as cm
 from Statistics import StatCollector, ClassCollector
 from RunSettings import GlobalSettings
-# Exploration modules
 
+# Exploration modules
+# Decides how the exploration/exploitation is addressed.
+
+# Dummy class, meant to demonstrate which functions are necessary for a
+# working exploration policy
 class ExplorationPolicy():
 
 	cc = None
@@ -12,16 +16,16 @@ class ExplorationPolicy():
 	def __init__(self):
 		pass
 
+	#Should return which action to select from qValues
 	def getAction(self, qValues):
 		pass
-
 
 	def endSimulationUpdate(self):
 		pass
 
 
 
-
+#Chooses the best possible action, always
 class GreedyPolicy(ExplorationPolicy):
 
 	def __init__(self):
@@ -33,7 +37,7 @@ class GreedyPolicy(ExplorationPolicy):
 	def endSimulationUpdate(self):
 		pass
 
-
+#Boltzman exploration
 class BoltzmanExplorationPolicy(ExplorationPolicy):
 
 	VALID_DECAY_MODES = ["multiplication", "linear"]
@@ -45,10 +49,9 @@ class BoltzmanExplorationPolicy(ExplorationPolicy):
 		self.minTemperature = minTemperature
 
 		if (decayMode not in self.VALID_DECAY_MODES):
-			print(f"{cm.WARNING} Provided invalid decay mode {decayMode}. Defaulting to {self.VALID_DECAY_MODES[0]} instead.")
+			print(f"{cm.WARNING} Provided invalid decay mode {decayMode}. Defaulting to {self.VALID_DECAY_MODES[0]} instead.{cm.NORMAL}")
 			decayMode = self.VALID_DECAY_MODES[0]
 		self.decayMode = decayMode
-
 
 	def getAction(self, qValues):
 		proportion = [np.power(np.e, i/self.temperature) for i in qValues]
@@ -65,18 +68,17 @@ class BoltzmanExplorationPolicy(ExplorationPolicy):
 
 	def endSimulationUpdate(self):
 		if (self.decayMode is "multiplication"):
-			self.epsilon = max(self.temperature * self.temperatureDecay, self.minTemperature)
+			self.temperature = max(self.temperature * self.temperatureDecay, self.minTemperature)
 
 		elif (self.decayMode is "linear"):
-			self.epsilon = max(self.temperature - self.temperatureDecay, self.minTemperature)
-
+			self.temperature = max(self.temperature - self.temperatureDecay, self.minTemperature)
 
 
 
 class EpsilonGreedyPolicy(ExplorationPolicy):
 
 	#this function allows us to obtain an epsilon decay, which results in an epsilon of targetEpsilon at episode numEpisodes
-	#under a multiplication epsilon decay
+	#under a multiplication epsilon decay, assuming a starting epsilon of 1
 	@staticmethod
 	def getDecay(targetEpsilon, numEpisodes, decayMode = "multiplication"):
 
@@ -85,8 +87,8 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 		elif (decayMode == "linear"):
 			return 1/numEpisodes
 
-	#TODO turn into ENUM with string mapping
 	VALID_DECAY_MODES = ["multiplication", "linear"]
+
 
 	def __init__(self, epsilon, decayRate, minEpsilon, decayMode = "multiplication"):
 		self.epsilon = epsilon
@@ -99,16 +101,9 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			decayMode = self.VALID_DECAY_MODES[0]
 		self.decayMode = decayMode
 
-		if GlobalSettings.printMode == GlobalSettings.PRINT_MODES[0]:
-			print(f"{cm.NORMAL}Initialized eps-greedy exploration policy with start eps: {epsilon}, min eps: {minEpsilon}, decay mode: {decayMode}, and decay rate: {decayRate}")
-
-		#statC = StatCollector.getInstance()
-		#self.cc = statC.getClassCollector()
-		#self.cc.addStatistic("epsilonOverTime", "Epsilon value over time")
-
 	def updateEpsilon(self):
 
-		if (self.epsilon < self.minEpsilon):
+		if (self.epsilon <= self.minEpsilon):
 			return
 
 		if (self.decayMode is "multiplication"):
@@ -118,9 +113,6 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 			self.epsilon = max(self.epsilon - self.decayRate, self.minEpsilon)
 
 	def endSimulationUpdate(self):
-		#statC = StatCollector.getInstance()
-		#self.cc.updateStatistic("epsilonOverTime", self.epsilon)
-
 		self.updateEpsilon()
 
 	def _takeRandom(self):
