@@ -56,7 +56,12 @@ class BoltzmanExplorationPolicy(ExplorationPolicy):
 	def getAction(self, qValues):
 		proportion = [np.power(np.e, i/self.temperature) for i in qValues]
 		sum = np.sum(proportion)
-		proportion = sorted([i/sum for i in proportion], reverse = True)
+
+		proportion = [i/sum for i in proportion]
+
+		for i in range(0, len(proportion)):
+			if (np.isnan(proportion[i])):
+				proportion[i] = 1
 
 		selected = np.random.uniform(0, 1)
 
