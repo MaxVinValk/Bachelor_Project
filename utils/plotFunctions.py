@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-def plotResults(avgEps, avgBoltz, avgEps, avgABL):
+def plotResults(avgTab, avgBoltz, avgEps, avgABL):
 
     plt.plot(avgEps, "-.")
     plt.plot(avgBoltz, "--") ; plt.plot(avgTab, "-") ; plt.plot(avgABL, ":")
