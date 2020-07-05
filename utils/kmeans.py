@@ -172,8 +172,8 @@ def filterOutGenes(genes, toFilterOut):
 
     for i in range(0, len(genes)):
         for gene in toFilterOut:
-            if gene in genes[i][1]:
-                del genes[i][1][gene]
+            if toFilterOut in genes[i][1]:
+                del genes[i][1][toFilterOut]
 
 
 #IN: a list of genes
